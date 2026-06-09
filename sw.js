@@ -1,4 +1,4 @@
-// Flex Challenge Service Worker v1.1
+// Flex Challenge Service Worker v1.2
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
@@ -13,33 +13,34 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background messages
+// Handle background DATA messages - show exactly ONE notification
 messaging.onBackgroundMessage((payload) => {
-  const { title, body, icon } = payload.notification || {};
-  self.registration.showNotification(title || '🔥 Flex Challenge', {
-    body: body || '',
-    icon: icon || '/icon192.png',
+  const title = payload.data?.title || '🔥 Flex Challenge';
+  const body = payload.data?.body || '';
+  
+  self.registration.showNotification(title, {
+    body: body,
+    icon: '/icon192.png',
     badge: '/icon192.png',
     vibrate: [200, 100, 200],
-    data: { url: '/', chatId: payload.data?.chatId || 'group' },
-    tag: 'flex-chat'
+    data: { chatId: payload.data?.chatId || 'group' },
+    tag: 'flex-chat',
+    renotify: true
   });
 });
 
-// Handle notification click - open app and navigate to chat
+// Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If app is already open, focus it
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.postMessage({ action: 'openChat' });
           return client.focus();
         }
       }
-      // Otherwise open new window
       if (clients.openWindow) {
         return clients.openWindow('/?openChat=true');
       }
@@ -47,8 +48,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Cache for offline support
-const CACHE = 'flex-v1';
+const CACHE = 'flex-v2';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
