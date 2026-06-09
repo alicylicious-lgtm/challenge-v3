@@ -306,17 +306,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message', (event)=>{
     if(event.data?.action==='openChat'){
-      // Will be handled after login - store intent
-      window._openChatIntent = true;
-      if(window.currentPageReady) window.navigate?.('chat');
+      window._openChatIntent = event.data.chatId || 'group';
+      if(window.currentPageReady && window._navigateToChat) window._navigateToChat(window._openChatIntent);
     }
   });
 }
 
 // Check URL param for chat intent
-if(new URLSearchParams(location.search).get('openChat')==='true'){
-  window._openChatIntent = true;
-  // Clean URL
+const openChatParam = new URLSearchParams(location.search).get('openChat');
+if(openChatParam){
+  window._openChatIntent = openChatParam==='true'?'group':openChatParam;
   history.replaceState(null,'',location.pathname);
 }
 
@@ -446,6 +445,8 @@ let challengeData = {};
 let allUsers = {};
 let activeChatId = 'group';
 let chatUnsub = null;
+let unreadChats = {}; // chatId -> true
+let unreadListeners = [];
 let dmChatId = null;
 let currentDayIdx = null;
 
@@ -559,8 +560,9 @@ function renderApp(){
       <button class="nav-item ${currentPage==='leaderboard'?'active':''}" onclick="navigate('leaderboard')">
         ${svgChart()} <span>Rangliste</span>
       </button>
-      <button class="nav-item ${currentPage==='chat'?'active':''}" onclick="navigate('chat')">
+      <button class="nav-item ${currentPage==='chat'?'active':''}" onclick="navigate('chat')" style="position:relative;">
         ${svgChat()} <span>Chat</span>
+        <span id="navChatDot" style="display:none;position:absolute;top:6px;right:calc(50% - 16px);width:9px;height:9px;border-radius:50%;background:#FF3B30;border:1.5px solid var(--surface);"></span>
       </button>
       <button class="nav-item ${currentPage==='profile'?'active':''}" onclick="navigate('profile')">
         ${svgUser()} <span>Profil</span>
@@ -786,10 +788,11 @@ function renderChat(){
   const otherUsers = Object.entries(allUsers).filter(([uid])=>uid!==currentUser.uid);
 
   let tabsHtml = `<div class="chat-tabs">
-    <button class="chat-tab ${activeChatId==='group'?'active':''}" onclick="switchChat('group')">👥 Gruppe</button>`;
+    <button class="chat-tab ${activeChatId==='group'?'active':''}" onclick="switchChat('group')" style="position:relative;">👥 Gruppe<span id="tabDot_group" style="display:${unreadChats['group']?'inline-block':'none'};width:8px;height:8px;border-radius:50%;background:#FF3B30;margin-left:6px;"></span></button>`;
   otherUsers.forEach(([uid,u])=>{
     const chatId = [currentUser.uid,uid].sort().join('_');
-    tabsHtml+=`<button class="chat-tab ${activeChatId===chatId?'active':''}" onclick="switchChat('${chatId}','${uid}')">${u.displayName||u.email.split('@')[0]}</button>`;
+    const cleanId = chatId.replace(/[^a-zA-Z0-9]/g,'');
+    tabsHtml+=`<button class="chat-tab ${activeChatId===chatId?'active':''}" onclick="switchChat('${chatId}','${uid}')" style="position:relative;">${u.displayName||u.email.split('@')[0]}<span id="tabDot_${cleanId}" style="display:${unreadChats[chatId]?'inline-block':'none'};width:8px;height:8px;border-radius:50%;background:#FF3B30;margin-left:6px;"></span></button>`;
   });
   tabsHtml+=`</div>`;
 
@@ -892,7 +895,7 @@ function navigate(page){
     if(page==='home') content.innerHTML=renderHome();
     else if(page==='days') content.innerHTML=renderDays();
     else if(page==='leaderboard') content.innerHTML=renderLeaderboard();
-    else if(page==='chat'){content.innerHTML=renderChat();setTimeout(()=>loadChat(),100);}
+    else if(page==='chat'){content.innerHTML=renderChat();setTimeout(()=>loadChat(),100);markChatRead(activeChatId);}
     else if(page==='profile') content.innerHTML=renderProfile();
   } catch(err){
     console.error('navigate error:', err);
@@ -933,7 +936,64 @@ async function loadChat(){
 function switchChat(id, uid){
   activeChatId=id;
   if(chatUnsub){chatUnsub();chatUnsub=null;}
+  markChatRead(id);
   navigate('chat');
+}
+
+// ─── UNREAD TRACKING ──────────────────────────────────────
+function getLastRead(chatId){
+  return parseInt(localStorage.getItem('lastRead_'+chatId)||'0');
+}
+
+function markChatRead(chatId){
+  localStorage.setItem('lastRead_'+chatId, Date.now().toString());
+  delete unreadChats[chatId];
+  updateUnreadUI();
+}
+
+function updateUnreadUI(){
+  // Update nav chat icon dot
+  const hasUnread = Object.keys(unreadChats).length > 0;
+  const navDot = document.getElementById('navChatDot');
+  if(navDot) navDot.style.display = hasUnread?'block':'none';
+  // Update chat tab dots
+  Object.keys(unreadChats).forEach(cid=>{
+    const tabDot = document.getElementById('tabDot_'+cid.replace(/[^a-zA-Z0-9]/g,''));
+    if(tabDot) tabDot.style.display = 'inline-block';
+  });
+}
+
+function setupUnreadListeners(){
+  // Clean old listeners
+  unreadListeners.forEach(u=>u());
+  unreadListeners = [];
+  
+  // Listen to group chat
+  const chatIds = ['group'];
+  Object.keys(allUsers).forEach(uid=>{
+    if(uid!==currentUser.uid) chatIds.push([currentUser.uid,uid].sort().join('_'));
+  });
+  
+  chatIds.forEach(cid=>{
+    const path = cid==='group'?'groupChat':cid;
+    const q3 = query(collection(db,'chats',path,'messages'),orderBy('ts','desc'));
+    const unsub = onSnapshot(q3, snap=>{
+      if(snap.empty) return;
+      const latest = snap.docs[0].data();
+      if(latest.uid===currentUser.uid) return; // own message
+      const ts = latest.ts?.toDate?.()?.getTime()||0;
+      // currently viewing this chat? mark read instead
+      if(currentPage==='chat'&&activeChatId===cid){
+        markChatRead(cid);
+        return;
+      }
+      if(ts > getLastRead(cid)){
+        unreadChats[cid] = true;
+        updateUnreadUI();
+      }
+    });
+    unreadListeners.push(unsub);
+  });
 }
 
 async function sendMsg(){
@@ -1225,13 +1285,19 @@ onAuthStateChanged(auth, async(user)=>{
     applyTheme(currentUserData?.theme||'system');
     document.getElementById('app').innerHTML=renderApp();
     window.currentPageReady = true;
-    if(window._openChatIntent){
-      window._openChatIntent = false;
+    window._navigateToChat = (chatId)=>{
+      activeChatId = chatId==='group'?'group':chatId;
       navigate('chat');
+    };
+    if(window._openChatIntent){
+      const intent = window._openChatIntent;
+      window._openChatIntent = null;
+      window._navigateToChat(intent);
     } else {
       navigate('home');
     }
     clearAppBadge();
+    setupUnreadListeners();
     // Init push notifications
     initNotifications();
   } else {
