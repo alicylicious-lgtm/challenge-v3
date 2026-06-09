@@ -1,4 +1,4 @@
-// Flex Challenge Service Worker v1.0
+// Flex Challenge Service Worker v1.1
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
@@ -16,13 +16,35 @@ const messaging = firebase.messaging();
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
   const { title, body, icon } = payload.notification || {};
-  self.registration.showNotification(title || '⚡ Flex Challenge', {
+  self.registration.showNotification(title || '🔥 Flex Challenge', {
     body: body || '',
     icon: icon || '/icon192.png',
     badge: '/icon192.png',
     vibrate: [200, 100, 200],
-    data: payload.data
+    data: { url: '/', chatId: payload.data?.chatId || 'group' },
+    tag: 'flex-chat'
   });
+});
+
+// Handle notification click - open app and navigate to chat
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If app is already open, focus it
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.postMessage({ action: 'openChat' });
+          return client.focus();
+        }
+      }
+      // Otherwise open new window
+      if (clients.openWindow) {
+        return clients.openWindow('/?openChat=true');
+      }
+    })
+  );
 });
 
 // Cache for offline support

@@ -301,6 +301,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 
 <!-- Firebase -->
 <script type="module">
+// ─── NOTIFICATION CLICK HANDLING ─────────────────────────
+// Listen for messages from service worker (notification clicks)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', (event)=>{
+    if(event.data?.action==='openChat'){
+      // Will be handled after login - store intent
+      window._openChatIntent = true;
+      if(window.currentPageReady) window.navigate?.('chat');
+    }
+  });
+}
+
+// Check URL param for chat intent
+if(new URLSearchParams(location.search).get('openChat')==='true'){
+  window._openChatIntent = true;
+  // Clean URL
+  history.replaceState(null,'',location.pathname);
+}
+
+// Clear app badge when app gains focus
+function clearAppBadge(){
+  if('clearAppBadge' in navigator){
+    navigator.clearAppBadge().catch(()=>{});
+  }
+}
+window.addEventListener('focus', clearAppBadge);
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden) clearAppBadge();
+});
+
 // ─── PWA INSTALL ──────────────────────────────────────────
 let deferredPrompt = null;
 
@@ -1194,7 +1224,14 @@ onAuthStateChanged(auth, async(user)=>{
     // Apply saved theme
     applyTheme(currentUserData?.theme||'system');
     document.getElementById('app').innerHTML=renderApp();
-    navigate('home');
+    window.currentPageReady = true;
+    if(window._openChatIntent){
+      window._openChatIntent = false;
+      navigate('chat');
+    } else {
+      navigate('home');
+    }
+    clearAppBadge();
     // Init push notifications
     initNotifications();
   } else {
