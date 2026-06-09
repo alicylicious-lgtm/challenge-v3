@@ -316,7 +316,7 @@ let allUsers = {};
 let activeChatId = 'group';
 let chatUnsub = null;
 let dmChatId = null;
-let currentDayIdx = 0;
+let currentDayIdx = null;
 
 // ─── HELPERS ──────────────────────────────────────────────
 function getToday(uid){
@@ -508,8 +508,7 @@ function renderHome(){
 // ─── PAGE: DAYS ───────────────────────────────────────────
 function renderDays(){
   const today = getToday();
-  if(currentDayIdx > today) currentDayIdx = today;
-  // open-ended: today is always the latest day
+  if(currentDayIdx===undefined||currentDayIdx===null||currentDayIdx>today) currentDayIdx=today;
   const data = getDayData(currentUser.uid, currentDayIdx);
   const sc = dayScore(data);
   const isToday = currentDayIdx === today;
@@ -705,19 +704,28 @@ function renderProfile(){
 
 // ─── NAVIGATION ───────────────────────────────────────────
 function navigate(page){
-  currentPage = page;
-  if(chatUnsub){chatUnsub();chatUnsub=null;}
-  const app = document.getElementById('mainApp');
-  if(!app) return;
-  app.querySelector('.bottom-nav').querySelectorAll('.nav-item').forEach((el,i)=>{
-    el.classList.toggle('active',['home','days','leaderboard','chat','profile'][i]===page);
-  });
-  const content = document.getElementById('pageContent');
-  if(page==='home') content.innerHTML=renderHome();
-  else if(page==='days'){content.innerHTML=renderDays();}
-  else if(page==='leaderboard') content.innerHTML=renderLeaderboard();
-  else if(page==='chat'){content.innerHTML=renderChat();setTimeout(()=>loadChat(),100);}
-  else if(page==='profile') content.innerHTML=renderProfile();
+  try{
+    currentPage = page;
+    if(chatUnsub){chatUnsub();chatUnsub=null;}
+    const app = document.getElementById('mainApp');
+    if(!app) return;
+    app.querySelector('.bottom-nav').querySelectorAll('.nav-item').forEach((el,i)=>{
+      el.classList.toggle('active',['home','days','leaderboard','chat','profile'][i]===page);
+    });
+    const content = document.getElementById('pageContent');
+    if(page==='home') content.innerHTML=renderHome();
+    else if(page==='days') content.innerHTML=renderDays();
+    else if(page==='leaderboard') content.innerHTML=renderLeaderboard();
+    else if(page==='chat'){content.innerHTML=renderChat();setTimeout(()=>loadChat(),100);}
+    else if(page==='profile') content.innerHTML=renderProfile();
+  } catch(err){
+    console.error('navigate error:', err);
+    const content = document.getElementById('pageContent');
+    if(content) content.innerHTML=`<div style="padding:24px;color:var(--red);background:var(--surface);border-radius:16px;margin:16px;font-size:13px;line-height:1.8;">
+      <strong>⚠️ Fehler beim Laden</strong><br>${err.message}<br><br>
+      <small style="color:var(--text-muted);">${err.stack?.split('\n').slice(0,3).join('<br>')}</small>
+    </div>`;
+  }
 }
 
 // ─── CHAT LOGIC ───────────────────────────────────────────
@@ -983,8 +991,8 @@ onAuthStateChanged(auth, async(user)=>{
     if(userDoc.exists()) currentUserData=userDoc.data();
     else currentUserData={displayName:user.displayName||user.email,waterGoal:2.0};
 
-    currentDayIdx=getToday();
     await loadAllData(user.uid);
+    currentDayIdx=getToday();
     document.getElementById('app').innerHTML=renderApp();
     navigate('home');
   } else {
