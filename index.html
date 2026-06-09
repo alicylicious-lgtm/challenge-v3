@@ -208,6 +208,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .dm-time{font-size:11px;color:var(--text-muted);flex-shrink:0;}
 .unread-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;}
 
+/* INFO POPUP */
+.info-btn{background:none;border:1.5px solid var(--text-muted);border-radius:50%;width:20px;height:20px;font-size:10px;font-weight:700;color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;margin-left:4px;}
+.info-btn:hover{border-color:var(--teal);color:var(--teal);}
+.info-popup{background:var(--surface2);border:1px solid var(--teal-mid);border-radius:var(--radius);padding:16px;margin-top:8px;display:none;font-size:13px;line-height:1.6;color:var(--text-soft);}
+.info-popup.show{display:block;}
+.info-source{font-size:11px;color:var(--teal);margin-top:8px;font-style:italic;}
+
+/* WATER GOAL */
+.water-goal-link{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--teal-dim);border:1px solid var(--teal-mid);border-radius:var(--radius-sm);font-size:13px;color:var(--teal);cursor:pointer;text-decoration:none;margin-bottom:10px;}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:0;}
 </style>
@@ -242,9 +252,9 @@ const auth = getAuth(firebaseApp);
 const storage = getStorage(firebaseApp);
 
 // ─── CONFIG ───────────────────────────────────────────────
-const MAX_PTS = 11;
-const DAY_GOAL = 8;
-const MAX_CC = 8;
+const MAX_PTS = 15;
+const DAY_GOAL = 10;
+const MAX_CC_PER_WEEK = 1;
 const ADMIN_EMAIL = "alice@challenge.app"; // change to your email
 
 function getUserStart(uid){
@@ -259,12 +269,26 @@ function getUserDayIdx(uid){
 }
 
 const TASKS = [
-  {key:'water',  icon:'💧', name:'Wasser',      sub:'2L = 2 Pkt · 1,5L = 1 Pkt',                                    max:2},
-  {key:'schritte',icon:'👟',name:'Schritte',     sub:'≥10.000 = 2 · ≥8.000 = 1 · <8.000 = 0',                        max:2},
-  {key:'training',icon:'🏋️',name:'Training',     sub:'Gemacht = 2 · Nicht = 0',                                       max:2},
-  {key:'sugar',  icon:'🚫', name:'Kein Zucker',  sub:'Kein Industrie-/Saccharose-Zucker = 3 · Gegessen = 0\n(Fruchtzucker & Süßungsmittel erlaubt)', max:3},
-  {key:'read',   icon:'📚', name:'Lesen',        sub:'30 Min = 2 · 15 Min = 1',                                       max:2},
-  {key:'photo',  icon:'📸', name:'Foto',         sub:'Nur für dich — Progress verfolgen · keine Punkte',              max:0},
+  {key:'water',   icon:'💧', name:'Wasser',           sub:'Bedarfsliter = 2 Pkt · 75% davon = 1 Pkt',                        max:2,  type:'triple',
+   info:{text:'Wasser reguliert Körpertemperatur, transportiert Nährstoffe und flushed Giftstoffe aus. Bereits 2% Dehydration senken kognitive Leistung und Energie messbar.',source:'Eur J Clin Nutr, Popkin et al. (2010)'}},
+  {key:'schritte',icon:'👟', name:'Schritte',          sub:'≥10.000 = 2 · ≥8.000 = 1 · <8.000 = 0',                           max:2,  type:'triple',
+   info:{text:'Regelmäßiges Gehen reduziert Herzerkrankungsrisiko um bis zu 31%, verbessert Stimmung durch Endorphine und steigert Kreativität nachweislich um 81%.',source:'Stanford Study, Oppezzo & Schwartz (2014)'}},
+  {key:'training',icon:'🏋️', name:'Training',          sub:'≥40 Min = 2 · ≥20 Min = 1 · Nichts = 0',                          max:2,  type:'triple',
+   info:{text:'Krafttraining und Ausdauersport erhöhen BDNF (Wachstumshormon fürs Gehirn), verbessern Insulinsensitivität, Schlafqualität und Selbstvertrauen langfristig.',source:"Harvard Medical School, Ratey (2008) Spark"}},
+  {key:'sugar',   icon:'🚫', name:'Kein Zucker',        sub:'Kein Industrie-/Saccharose-Zucker = 4 · Gegessen = 0 (Fruchtzucker & Süßungsmittel erlaubt)',max:4, type:'binary',
+   info:{text:'Industriezucker verursacht Insulinspitzen, fördert Entzündungen, beeinflusst Dopamin wie Drogen und ist mit Depression, Übergewicht & Akne verknüpft.',source:"BMJ, Knueppel et al. (2017); Lustig Fat Chance"}},
+  {key:'read',    icon:'📚', name:'Lesen',              sub:'≥10 Seiten = 2 · ≥5 Seiten = 1 · Nichts = 0',                    max:2,  type:'triple',
+   info:{text:'Täglich 30 Min lesen reduziert Stresslevel um 68% (schneller als Musik!), baut Empathie aus und ist der stärkste Prädiktor für Wortschatz & kognitive Stärke.',source:'Univ. of Sussex, Lewis (2009); Cunningham et al. (2018)'}},
+  {key:'mindful', icon:'🧘', name:'Mindfulness/Lernen', sub:'Meditation, Journaling, Kurs, Podcast, Sprache = 1 Pkt',          max:1,  type:'binary',
+   info:{text:'8 Wochen Mindfulness-Praxis verändert die Gehirnstruktur messbar (mehr graue Masse in Amygdala & Hippocampus). Lernen hält das Gehirn plastisch und jung.',source:'Harvard/MGH, Hoelzel et al. (2011)'}},
+  {key:'sleep',   icon:'😴', name:'Schlaf 7-8h',        sub:'7-8h = 1 Pkt · Weniger = 0',                                      max:1,  type:'binary',
+   info:{text:'Schlafmangel erhöht Cortisol, hemmt Fettabbau, schwächt Immunsystem und verdoppelt Unfallrisiko. Im Schlaf werden Erinnerungen konsolidiert und Muskeln repariert.',source:'Walker: Why We Sleep (2017); Spiegel et al. (1999)'}},
+  {key:'sun',     icon:'☀️', name:'Frischluft & Sonne', sub:'Mind. 15 Min draußen = 1 Pkt',                                   max:1,  type:'binary',
+   info:{text:'Sonnenlicht triggert Serotoninproduktion, reguliert den Schlaf-Wach-Rhythmus und ist die beste Vitamin-D-Quelle. Natur reduziert Cortisol nachweislich binnen 20 Minuten.',source:'NIH; Bratman et al. (2015), Stanford'}},
+  {key:'social',  icon:'📵', name:'Wenig Social Media',  sub:'Unter 30 Min = 2 · Unter 1h = 1 · Mehr = 0',                    max:2,  type:'triple',
+   info:{text:'Social Media aktiviert dasselbe Belohnungssystem wie Glücksspiel. Mehr als 2h/Tag korreliert stark mit Angst, Depression & schlechtem Schlaf bei allen Altersgruppen.',source:'JAMA Pediatrics, Twenge et al. (2018); Haidt: The Anxious Generation'}},
+  {key:'photo',   icon:'📸', name:'Foto',                sub:'Nur für dich — Progress verfolgen · keine Punkte',               max:0,  type:'photo',
+   info:{text:'Progress-Fotos sind eines der stärksten Motivationstools: Sie machen unsichtbare Veränderungen sichtbar, aktivieren das Belohnungssystem und helfen, Rückschläge zu überwinden.',source:'Journal of Behavioral Medicine; Bandura Self-Efficacy Theory'}},
 ];
 
 const QUOTES = [
@@ -374,7 +398,7 @@ function renderApp(){
       <div class="topbar-title">⚡ Flex Challenge</div>
       <div class="topbar-user" onclick="navigate('profile')">
         ${avatarHTML(currentUser.uid,34)}
-        <span style="font-size:13px;font-weight:600;">${currentUserData?.displayName||currentUser.email}</span>
+        <span style="font-size:13px;font-weight:600;">${currentUserData?.displayName||currentUser.displayName||currentUser.email.split('@')[0]}</span>
       </div>
     </div>
     <div class="page" id="pageContent"></div>
@@ -416,7 +440,7 @@ function renderHome(){
 
   return `
   <div class="hero-card">
-    <div class="hero-name">${currentUserData?.displayName||'Hey!'}</div>
+    <div class="hero-name">${currentUserData?.displayName||currentUser.displayName||currentUserData?.email?.split('@')[0]||'Hey!'}</div>
     <div class="hero-sub">⚡ Flex Challenge</div>
     <div class="hero-badges">
       <div class="badge">Dabei seit ${formatDate(startD)}</div>
@@ -433,13 +457,16 @@ function renderHome(){
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div style="font-weight:600;font-size:14px;">Mein Gesamtfortschritt</div>
+      <div style="font-weight:600;font-size:14px;">Heute</div>
       <div class="day-badge ${badgeCls}">${badgeLabel}</div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;">
-      <span>${totalSc} Pkt</span><span>Ziel: ${goal} Pkt (${pct}%)</span>
+      <span>${sc} / ${MAX_PTS} Pkt heute</span><span>Tagesziel: ${DAY_GOAL} Pkt</span>
     </div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(sc/MAX_PTS*100)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin:8px 0 4px;">
+      <span>Gesamt: ${totalSc} Pkt</span><span>Ø ${today>0?Math.round(totalSc/today):totalSc} Pkt/Tag</span>
+    </div>
     <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="navigate('days')">Heute eintragen →</button>
   </div>
 
@@ -447,17 +474,26 @@ function renderHome(){
   <div class="card">
     <div class="card-title">⚡ Punkte-System</div>
     ${TASKS.map(t=>`
-    <div class="task-row">
-      <div class="task-icon-wrap">${t.icon}</div>
-      <div class="task-info">
-        <div class="task-name">${t.name}</div>
-        <div class="task-sub">${t.sub}</div>
+    <div>
+      <div class="task-row">
+        <div class="task-icon-wrap">${t.icon}</div>
+        <div class="task-info">
+          <div class="task-name" style="display:flex;align-items:center;gap:4px;">
+            ${t.name}
+            <button class="info-btn" onclick="toggleInfo('home_info_${t.key}')">i</button>
+          </div>
+          <div class="task-sub">${t.key==='water'?(currentUserData?.waterGoal||2)+' L = 2 Pkt · '+Math.round((currentUserData?.waterGoal||2)*0.75*10)/10+' L = 1 Pkt':t.sub}</div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--teal);">${t.max}</div>
       </div>
-      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--teal);">${t.max}</div>
+      <div class="info-popup" id="home_info_${t.key}">
+        ${t.info.text}
+        <div class="info-source">📖 ${t.info.source}</div>
+      </div>
     </div>`).join('')}
     <div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-soft);line-height:1.6;">
       <strong style="color:var(--text);">Ziel:</strong> Mind. ${DAY_GOAL} Pkt/Tag · Max ${MAX_PTS} Pkt/Tag<br>
-      <strong style="color:var(--text);">CC-Tage:</strong> Max. ${MAX_CC} bewusste Ausnahmen — kein Neustart!<br>
+      <strong style="color:var(--text);">CC-Tage:</strong> Max. 1 pro Woche — bewusste Ausnahme, kein Neustart!<br>
       <strong style="color:var(--text);">Konsistenz</strong> über Perfektion 💪
     </div>
   </div>`;
@@ -499,30 +535,40 @@ function renderDays(){
 
   TASKS.forEach((task,idx)=>{
     const val = data[task.key];
-    if(task.max===3){
-      html+=`<div class="task-row">
-        <div class="task-icon-wrap">${task.icon}</div>
-        <div class="task-info"><div class="task-name">${task.name}</div><div class="task-sub">${task.sub}</div></div>
-        <div class="score-btns">
-          <button class="score-btn ${val===0?'active-0':''}" onclick="setScore('${task.key}',0)">✗</button>
-          <button class="score-btn ${val===3?'active-3':''}" onclick="setScore('${task.key}',3)">3</button>
-        </div></div>`;
-    } else if(task.max===2){
-      html+=`<div class="task-row">
-        <div class="task-icon-wrap">${task.icon}</div>
-        <div class="task-info"><div class="task-name">${task.name}</div><div class="task-sub">${task.sub}</div></div>
-        <div class="score-btns">
-          ${[0,1,2].map(v=>`<button class="score-btn ${val===v?'active-'+v:''}" onclick="setScore('${task.key}',${v})">${v}</button>`).join('')}
-        </div></div>`;
-    } else {
-      html+=`<div class="task-row">
-        <div class="task-icon-wrap">${task.icon}</div>
-        <div class="task-info"><div class="task-name">${task.name}</div><div class="task-sub">${task.sub}</div></div>
-        <div class="score-btns">
-          <button class="score-btn ${!val?'active-0':''}" onclick="setScore('${task.key}',null)">✗</button>
-          <button class="score-btn ${val==='done'?'active-photo':''}" onclick="setScore('${task.key}','done')">📸</button>
-        </div></div>`;
+    const wg = currentUserData?.waterGoal||2.0;
+    const waterSub = task.key==='water'?`${wg}L = 2 Pkt · ${Math.round(wg*0.75*10)/10}L = 1 Pkt`:task.sub;
+    const subToShow = task.key==='water'?waterSub:task.sub;
+    const infoId = 'info_'+task.key;
+
+    let btns='';
+    if(task.type==='binary'&&task.max>0){
+      btns=`<button class="score-btn ${val===0?'active-0':''}" onclick="setScore('${task.key}',0)">✗</button>
+            <button class="score-btn ${val===task.max?'active-'+task.max:''}" onclick="setScore('${task.key}',${task.max})">${task.max}</button>`;
+    } else if(task.type==='triple'){
+      btns=[0,1,2].map(v=>`<button class="score-btn ${val===v?'active-'+v:''}" onclick="setScore('${task.key}',${v})">${v}</button>`).join('');
+    } else if(task.type==='photo'){
+      btns=`<button class="score-btn ${!val?'active-0':''}" onclick="setScore('${task.key}',null)">✗</button>
+            <button class="score-btn ${val==='done'?'active-photo':''}" onclick="setScore('${task.key}','done')">📸</button>`;
     }
+
+    html+=`<div>
+      <div class="task-row">
+        <div class="task-icon-wrap">${task.icon}</div>
+        <div class="task-info">
+          <div class="task-name" style="display:flex;align-items:center;gap:4px;">
+            ${task.name}
+            <button class="info-btn" onclick="toggleInfo('${infoId}')">i</button>
+            ${task.key==='water'?`<button class="info-btn" style="border-color:var(--teal);color:var(--teal);width:auto;border-radius:99px;padding:0 8px;font-size:10px;" onclick="showWaterGoal()">Ziel setzen</button>`:''}
+          </div>
+          <div class="task-sub">${subToShow}</div>
+        </div>
+        <div class="score-btns">${btns}</div>
+      </div>
+      <div class="info-popup" id="${infoId}">
+        ${task.info.text}
+        <div class="info-source">📖 ${task.info.source}</div>
+      </div>
+    </div>`;
   });
 
   html+=`</div>
@@ -531,7 +577,7 @@ function renderDays(){
     <div class="cc-info" style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:12px;">
       An besonderen Tagen (Geburtstag, Event, Urlaub, Hochzeit…) darf man bewusst eine Ausnahme machen — <strong style="color:var(--text);">ohne Neustart!</strong><br>
       Einfach <strong style="color:var(--text);">"CC"</strong> markieren und den Tag genießen.<br>
-      Erlaubt: <strong style="color:var(--text);">max. ${MAX_CC} CC-Tage</strong> in den ganzen 75 Tagen.
+      Erlaubt: <strong style="color:var(--text);">max. 1 CC-Tag pro Woche</strong> — ohne Limit insgesamt.
     </div>
     <div class="cc-toggle ${data.cc?'active':''}" onclick="toggleCC()">
       <div class="toggle-dot"></div>
@@ -630,7 +676,7 @@ function renderProfile(){
       <div class="profile-avatar-edit">✏️</div>
     </div>
     <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="uploadPhoto(this)">
-    <div class="profile-name">${currentUserData?.displayName||currentUser.email}</div>
+    <div class="profile-name">${currentUserData?.displayName||currentUser.displayName||currentUser.email.split('@')[0]}</div>
     <div class="profile-email">${currentUser.email}</div>
   </div>
 
@@ -646,6 +692,7 @@ function renderProfile(){
     <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${totalSc} / ${goal} Punkte zum Ziel</div>
   </div>
 
+  <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="showChangeName()">✏️ Name ändern</button>
   <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="showChangePassword()">🔑 Passwort ändern</button>
   <button class="btn btn-danger" style="width:100%;" onclick="doSignOut()">Abmelden</button>`;
 }
@@ -805,6 +852,31 @@ window.doSignOut = async()=>{
   await signOut(auth);
 };
 
+window.showChangeName = ()=>{
+  document.getElementById('modal').innerHTML=`
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">✏️ Name ändern</div>
+    <div class="field" style="margin-bottom:12px;"><label>Dein Name</label><input type="text" id="newName" placeholder="Vorname" value="${currentUserData?.displayName||currentUser.displayName||''}"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="changeName()">Speichern</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+};
+
+window.changeName = async()=>{
+  const name=document.getElementById('newName').value.trim();
+  if(!name){showToast('❌ Bitte Namen eingeben');return;}
+  try{
+    await updateProfile(currentUser,{displayName:name});
+    await updateDoc(doc(db,'users',currentUser.uid),{displayName:name});
+    if(!currentUserData) currentUserData={};
+    currentUserData.displayName=name;
+    if(!allUsers[currentUser.uid]) allUsers[currentUser.uid]={};
+    allUsers[currentUser.uid].displayName=name;
+    showToast('✅ Name geändert!');
+    closeModal();
+    navigate('profile');
+  }catch(e){showToast('❌ '+e.message);}
+};
+
 window.showChangePassword = ()=>{
   document.getElementById('modal').innerHTML=`
     <button class="modal-close" onclick="closeModal()">✕</button>
@@ -825,6 +897,44 @@ window.changePassword = async()=>{
 window.closeModal = (e)=>{
   if(!e||e.target===document.getElementById('modalOverlay'))
     document.getElementById('modalOverlay').classList.remove('show');
+};
+
+window.toggleInfo = (id)=>{
+  const el=document.getElementById(id);
+  if(el) el.classList.toggle('show');
+};
+
+window.showWaterGoal = ()=>{
+  const current=currentUserData?.waterGoal||2.0;
+  document.getElementById('modal').innerHTML=`
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">💧 Wasserbedarf setzen</div>
+    <a href="https://wasserbedarf-rechner.de/" target="_blank" class="water-goal-link">
+      🔗 Zum Wasserbedarf-Rechner öffnen →
+    </a>
+    <div style="font-size:13px;color:var(--text-soft);margin-bottom:12px;">Berechne deinen persönlichen Bedarf und trage ihn hier ein:</div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Mein täglicher Bedarf (Liter)</label>
+      <input type="number" id="waterGoalInput" value="${current}" step="0.1" min="1" max="5" placeholder="z.B. 1.9">
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+      Beispiel: Bei 1,9L Bedarf → 1,9L = 2 Pkt · ${Math.round(1.9*0.75*10)/10}L = 1 Pkt
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="saveWaterGoal()">Speichern</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+};
+
+window.saveWaterGoal = async()=>{
+  const val=parseFloat(document.getElementById('waterGoalInput').value);
+  if(!val||val<1||val>5){showToast('❌ Bitte gültigen Wert eingeben (1-5L)');return;}
+  try{
+    await updateDoc(doc(db,'users',currentUser.uid),{waterGoal:val});
+    if(!currentUserData) currentUserData={};
+    currentUserData.waterGoal=val;
+    showToast('✅ Wasserziel gesetzt: '+val+'L');
+    closeModal();
+    navigate('days');
+  }catch(e){showToast('❌ '+e.message);}
 };
 
 // ─── DATA LOADING ─────────────────────────────────────────
@@ -865,7 +975,7 @@ onAuthStateChanged(auth, async(user)=>{
     // Load user profile
     const userDoc=await getDoc(doc(db,'users',user.uid));
     if(userDoc.exists()) currentUserData=userDoc.data();
-    else currentUserData={displayName:user.displayName||user.email};
+    else currentUserData={displayName:user.displayName||user.email,waterGoal:2.0};
 
     currentDayIdx=getToday();
     await loadAllData(user.uid);
