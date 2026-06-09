@@ -193,6 +193,22 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .chat-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:10px 16px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;}
 .chat-input:focus{border-color:var(--teal);}
 .chat-send{width:40px;height:40px;border-radius:50%;background:var(--teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chat-action-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;transition:all .2s;}
+.chat-action-btn:hover{border-color:var(--teal);}
+.emoji-picker{position:fixed;bottom:80px;left:8px;right:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;z-index:50;display:none;box-shadow:0 -4px 24px rgba(0,0,0,.3);}
+.emoji-picker.show{display:block;}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:160px;overflow-y:auto;}
+.emoji-item{font-size:22px;text-align:center;cursor:pointer;padding:4px;border-radius:8px;transition:background .15s;}
+.emoji-item:hover{background:var(--surface2);}
+.gif-picker{position:fixed;bottom:80px;left:8px;right:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;z-index:50;display:none;box-shadow:0 -4px 24px rgba(0,0,0,.3);max-height:60vh;overflow-y:auto;}
+.gif-picker.show{display:block;}
+.gif-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:8px 14px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;}
+.gif-search:focus{border-color:var(--teal);}
+.gif-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.gif-item{border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;aspect-ratio:16/9;}
+.gif-item img{width:100%;height:100%;object-fit:cover;}
+.msg-gif{max-width:200px;border-radius:var(--radius-sm);overflow:hidden;}
+.msg-gif img{width:100%;display:block;}
 
 /* PROFILE PAGE */
 .profile-header{display:flex;flex-direction:column;align-items:center;padding:24px 16px 16px;gap:12px;}
@@ -421,7 +437,11 @@ function renderRegister(){
     </div>
     <div class="auth-card">
       <h2>Konto erstellen</h2>
-      <div class="field"><label>Einladungscode</label><input type="text" id="inviteCode" placeholder="z.B. FLEX2026" autocomplete="off"></div>
+      <div class="field">
+        <label>Einladungscode <span style="color:var(--red);">*</span></label>
+        <input type="text" id="inviteCode" placeholder="Code vom Einlader eingeben" autocomplete="off" required>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">⚠️ Du erhältst den Code von der Person, die dich eingeladen hat.</div>
+      </div>
       <div class="field"><label>Dein Name</label><input type="text" id="regName" placeholder="Vorname" autocomplete="name"></div>
       <div class="field"><label>E-Mail</label><input type="email" id="regEmail" placeholder="deine@email.com" autocomplete="email"></div>
       <div class="field"><label>Passwort (mind. 6 Zeichen)</label><input type="password" id="regPw" placeholder="••••••••" autocomplete="new-password"></div>
@@ -690,7 +710,18 @@ function renderChat(){
   return `<div class="chat-wrap">
     ${tabsHtml}
     <div class="chat-messages" id="chatMessages"><div style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">Lade Nachrichten…</div></div>
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emojiPicker">
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+    <!-- GIF Picker -->
+    <div class="gif-picker" id="gifPicker">
+      <input class="gif-search" id="gifSearch" placeholder="🔍 GIF suchen…" oninput="searchGifs(this.value)">
+      <div class="gif-grid" id="gifGrid"><div style="text-align:center;color:var(--text-muted);padding:20px;grid-column:1/-1;">Tippe etwas um GIFs zu suchen 🎬</div></div>
+    </div>
     <div class="chat-input-wrap">
+      <button class="chat-action-btn" onclick="toggleEmojiPicker()">😊</button>
+      <button class="chat-action-btn" onclick="toggleGifPicker()">GIF</button>
       <input class="chat-input" id="chatInput" placeholder="Nachricht…" onkeydown="if(event.key==='Enter')sendMsg()">
       <button class="chat-send" onclick="sendMsg()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F1923" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -790,9 +821,12 @@ async function loadChat(){
       const m=d.data();
       const mine=m.uid===currentUser.uid;
       const ts=m.ts?.toDate?.()?m.ts.toDate().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}):'';
+      const bubbleContent = m.gifUrl
+        ? `<div class="msg-gif"><img src="${m.gifUrl}" alt="GIF" loading="lazy"></div>`
+        : `<div class="msg-bubble">${m.text}</div>`;
       return `<div class="msg ${mine?'mine':'theirs'}">
         ${!mine?`<div class="msg-author">${allUsers[m.uid]?.displayName||m.uid}</div>`:''}
-        <div class="msg-bubble">${m.text}</div>
+        ${bubbleContent}
         <div class="msg-time">${ts}</div>
       </div>`;
     }).join('');
@@ -1071,6 +1105,80 @@ onAuthStateChanged(auth, async(user)=>{
 });
 
 // ─── GLOBAL FUNCTIONS ─────────────────────────────────────
+// ─── EMOJI & GIF ──────────────────────────────────────────
+const EMOJIS=['😊','😂','🔥','💪','❤️','👏','🎉','😍','🤔','😅',
+              '✨','🌟','💯','🙌','😎','🤩','😴','😤','🥳','😇',
+              '👍','👎','🫶','💪','🏆','🥇','⚡','🌈','🎯','💡',
+              '🍕','🥗','💧','🏃','🧘','📚','🎵','🌸','🦋','🌺'];
+
+const GIPHY_KEY = 'dc6zaTOxFJmzC'; // public beta key
+
+window.toggleEmojiPicker = ()=>{
+  const ep=document.getElementById('emojiPicker');
+  const gp=document.getElementById('gifPicker');
+  if(!ep) return;
+  gp?.classList.remove('show');
+  if(!ep.classList.contains('show')){
+    const grid=document.getElementById('emojiGrid');
+    if(grid) grid.innerHTML=EMOJIS.map(e=>`<div class="emoji-item" onclick="insertEmoji('${e}')">${e}</div>`).join('');
+  }
+  ep.classList.toggle('show');
+};
+
+window.toggleGifPicker = ()=>{
+  const gp=document.getElementById('gifPicker');
+  const ep=document.getElementById('emojiPicker');
+  if(!gp) return;
+  ep?.classList.remove('show');
+  gp.classList.toggle('show');
+  if(gp.classList.contains('show')){
+    searchGifs('happy');
+  }
+};
+
+window.insertEmoji = (emoji)=>{
+  const inp=document.getElementById('chatInput');
+  if(inp){inp.value+=emoji;inp.focus();}
+  document.getElementById('emojiPicker')?.classList.remove('show');
+};
+
+window.searchGifs = async(query)=>{
+  if(!query||query.length<2) return;
+  const grid=document.getElementById('gifGrid');
+  if(!grid) return;
+  grid.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;grid-column:1/-1;">Suche…</div>';
+  try{
+    const res=await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
+    const data=await res.json();
+    if(!data.data?.length){grid.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:20px;grid-column:1/-1;">Keine GIFs gefunden</div>';return;}
+    grid.innerHTML=data.data.map(g=>`
+      <div class="gif-item" onclick="sendGif('${g.images.fixed_height_small.url}','${g.images.original.url}')">
+        <img src="${g.images.fixed_height_small.url}" alt="${g.title}" loading="lazy">
+      </div>`).join('');
+  }catch(e){grid.innerHTML='<div style="text-align:center;color:var(--red);padding:20px;grid-column:1/-1;">Fehler beim Laden</div>';}
+};
+
+window.sendGif = async(previewUrl, originalUrl)=>{
+  document.getElementById('gifPicker')?.classList.remove('show');
+  const chatPath=activeChatId==='group'?'groupChat':activeChatId;
+  await addDoc(collection(db,'chats',chatPath,'messages'),{
+    uid:currentUser.uid,
+    text:'',
+    gifUrl:originalUrl,
+    ts:serverTimestamp()
+  });
+};
+
+// Close pickers when clicking outside
+document.addEventListener('click',(e)=>{
+  if(!e.target.closest('.emoji-picker')&&!e.target.closest('.chat-action-btn')){
+    document.getElementById('emojiPicker')?.classList.remove('show');
+  }
+  if(!e.target.closest('.gif-picker')&&!e.target.closest('.chat-action-btn')){
+    document.getElementById('gifPicker')?.classList.remove('show');
+  }
+});
+
 window.navigate=navigate;
 window.setScore=setScore;
 window.toggleCC=toggleCC;
