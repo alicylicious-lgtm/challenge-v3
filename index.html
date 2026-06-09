@@ -442,9 +442,18 @@ function renderRegister(){
         <input type="text" id="inviteCode" placeholder="Code vom Einlader eingeben" autocomplete="off" required>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">⚠️ Du erhältst den Code von der Person, die dich eingeladen hat.</div>
       </div>
-      <div class="field"><label>Dein Name</label><input type="text" id="regName" placeholder="Vorname" autocomplete="name"></div>
-      <div class="field"><label>E-Mail</label><input type="email" id="regEmail" placeholder="deine@email.com" autocomplete="email"></div>
-      <div class="field"><label>Passwort (mind. 6 Zeichen)</label><input type="password" id="regPw" placeholder="••••••••" autocomplete="new-password"></div>
+      <div class="field">
+        <label>Dein Vorname <span style="color:var(--red);">*</span></label>
+        <input type="text" id="regName" placeholder="Dein Vorname" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>E-Mail <span style="color:var(--red);">*</span></label>
+        <input type="email" id="regEmail" placeholder="deine@email.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Passwort <span style="color:var(--red);">*</span> <span style="color:var(--text-muted);font-size:11px;">(mind. 6 Zeichen)</span></label>
+        <input type="password" id="regPw" placeholder="••••••••" autocomplete="new-password">
+      </div>
       <div class="auth-error" id="regError"></div>
       <button class="btn btn-primary" onclick="doRegister()">Konto erstellen →</button>
     </div>
@@ -932,8 +941,15 @@ window.doRegister = async()=>{
     const cred=await createUserWithEmailAndPassword(auth,email,pw);
     await updateProfile(cred.user,{displayName:name});
     await setDoc(doc(db,'users',cred.user.uid),{
-      displayName:name,email,createdAt:serverTimestamp(),startDate:serverTimestamp(),photoURL:null
+      displayName:name,
+      email,
+      createdAt:serverTimestamp(),
+      startDate:serverTimestamp(),
+      photoURL:null,
+      theme:'system'
     });
+    // Force reload user so displayName is available immediately
+    await cred.user.reload();
     showToast('🎉 Willkommen '+name+'!');
   }catch(e){
     err.textContent=e.code==='auth/email-already-in-use'?'Diese E-Mail ist bereits registriert.':'Fehler: '+e.message;
@@ -1087,10 +1103,17 @@ async function loadAllData(uid){
 onAuthStateChanged(auth, async(user)=>{
   if(user){
     currentUser=user;
-    // Load user profile
+    // Load user profile from Firestore (source of truth)
     const userDoc=await getDoc(doc(db,'users',user.uid));
-    if(userDoc.exists()) currentUserData=userDoc.data();
-    else currentUserData={displayName:user.displayName||user.email,waterGoal:2.0};
+    if(userDoc.exists()){
+      currentUserData=userDoc.data();
+      // Sync Firebase Auth displayName if missing
+      if(!user.displayName&&currentUserData.displayName){
+        await updateProfile(user,{displayName:currentUserData.displayName});
+      }
+    } else {
+      currentUserData={displayName:user.displayName||user.email.split('@')[0],waterGoal:2.0};
+    }
 
     await loadAllData(user.uid);
     currentDayIdx=getToday();
