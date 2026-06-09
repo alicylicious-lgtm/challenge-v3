@@ -512,7 +512,8 @@ function renderDays(){
   const data = getDayData(currentUser.uid, currentDayIdx);
   const sc = dayScore(data);
   const isToday = currentDayIdx === today;
-  const date = new Date(CHALLENGE_START);
+  const userStart = getUserStart(currentUser.uid);
+  const date = new Date(userStart);
   date.setDate(date.getDate() + currentDayIdx);
   const dateStr = date.toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'2-digit'});
 
