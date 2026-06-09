@@ -258,9 +258,12 @@ const MAX_CC_PER_WEEK = 1;
 const ADMIN_EMAIL = "alice@challenge.app"; // change to your email
 
 function getUserStart(uid){
-  const u=allUsers[uid];
-  if(!u?.startDate) return new Date();
-  return u.startDate.toDate?u.startDate.toDate():new Date(u.startDate);
+  const u=allUsers[uid]||currentUserData;
+  const sd=u?.startDate||u?.createdAt;
+  if(!sd) return new Date();
+  if(sd.toDate) return sd.toDate();
+  if(sd.seconds) return new Date(sd.seconds*1000);
+  return new Date(sd);
 }
 function getUserDayIdx(uid){
   const start=getUserStart(uid);
@@ -492,9 +495,12 @@ function renderHome(){
       </div>
     </div>`).join('')}
     <div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-soft);line-height:1.6;">
-      <strong style="color:var(--text);">Ziel:</strong> Mind. ${DAY_GOAL} Pkt/Tag · Max ${MAX_PTS} Pkt/Tag<br>
-      <strong style="color:var(--text);">CC-Tage:</strong> Max. 1 pro Woche — bewusste Ausnahme, kein Neustart!<br>
-      <strong style="color:var(--text);">Konsistenz</strong> über Perfektion 💪
+      <strong style="color:var(--text);">Ziel:</strong> Mind. ${DAY_GOAL} Pkt/Tag · Max ${MAX_PTS} Pkt/Tag<br><br>
+      <strong style="color:var(--teal);">🌴 Was ist ein CC-Tag? (Conscious Choice)</strong><br>
+      An besonderen Tagen — Geburtstag, Urlaub, Hochzeit, Event — darf man bewusst eine Ausnahme machen, <strong style="color:var(--text);">ohne die Challenge neu zu starten!</strong><br><br>
+      Einfach den CC-Schalter in der Tages-Ansicht aktivieren und den Tag in vollen Zügen genießen. Kein Schuldgefühl, kein Druck.<br><br>
+      <strong style="color:var(--text);">Erlaubt:</strong> Max. 1 CC-Tag pro Woche.<br>
+      <strong style="color:var(--text);">Konsistenz</strong> über Perfektion — 80% gut ist besser als perfekt aufgeben! 💪
     </div>
   </div>`;
 }
@@ -576,8 +582,8 @@ function renderDays(){
     <div class="card-title">🌴 Conscious Choice</div>
     <div class="cc-info" style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:12px;">
       An besonderen Tagen (Geburtstag, Event, Urlaub, Hochzeit…) darf man bewusst eine Ausnahme machen — <strong style="color:var(--text);">ohne Neustart!</strong><br>
-      Einfach <strong style="color:var(--text);">"CC"</strong> markieren und den Tag genießen.<br>
-      Erlaubt: <strong style="color:var(--text);">max. 1 CC-Tag pro Woche</strong> — ohne Limit insgesamt.
+      Geburtstag, Urlaub, Event? Einfach <strong style="color:var(--text);">"CC"</strong> (Conscious Choice) aktivieren und den Tag genießen — <strong style="color:var(--text);">kein Neustart!</strong><br>
+      Erlaubt: <strong style="color:var(--text);">max. 1 CC-Tag pro Woche.</strong> Kein Schuldgefühl, bewusste Ausnahme.
     </div>
     <div class="cc-toggle ${data.cc?'active':''}" onclick="toggleCC()">
       <div class="toggle-dot"></div>
