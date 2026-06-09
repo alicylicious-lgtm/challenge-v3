@@ -291,6 +291,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA5-KCa7NwlMYnWjYjF3phc6BOTH6v1iTU",
@@ -304,6 +305,8 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 const storage = getStorage(firebaseApp);
+let messaging = null;
+try { messaging = getMessaging(firebaseApp); } catch(e) { console.log('Messaging not supported'); }
 
 // ─── CONFIG ───────────────────────────────────────────────
 const MAX_PTS = 15;
@@ -780,6 +783,16 @@ function renderProfile(){
   <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="showChangePassword()">🔑 Passwort ändern</button>
   
   <div class="card" style="margin-bottom:10px;">
+    <div class="card-title" style="margin-bottom:12px;">🔔 Benachrichtigungen</div>
+    <div style="font-size:13px;color:var(--text-soft);margin-bottom:12px;line-height:1.6;">
+      Tägliche Erinnerungen, Streak-Warnungen, Ranglisten-Updates und mehr.
+    </div>
+    <button class="btn btn-ghost" style="width:100%;" onclick="toggleNotifications()">
+      ${Notification.permission==='granted'?'✅ Aktiviert — Einstellungen öffnen':'🔔 Benachrichtigungen aktivieren'}
+    </button>
+  </div>
+
+  <div class="card" style="margin-bottom:10px;">
     <div class="card-title" style="margin-bottom:12px;">🎨 Design</div>
     <div style="display:flex;gap:8px;">
       <button onclick="setTheme('system')" id="themeSystem" class="btn ${(!currentUserData?.theme||currentUserData?.theme==='system')?'btn-primary':'btn-ghost'}" style="flex:1;padding:10px;font-size:13px;">⚙️ System</button>
@@ -965,6 +978,21 @@ window.doSignOut = async()=>{
   await signOut(auth);
 };
 
+window.toggleNotifications = async()=>{
+  if(Notification.permission==='granted'){
+    showToast('ℹ️ Berechtigungen in den Browser-Einstellungen ändern');
+  } else {
+    const granted = await requestNotificationPermission();
+    if(granted){
+      setupLocalNotifications();
+      showToast('✅ Benachrichtigungen aktiviert!');
+      navigate('profile');
+    } else {
+      showToast('❌ Bitte in den Einstellungen erlauben');
+    }
+  }
+};
+
 window.setTheme = async(theme)=>{
   try{
     await updateDoc(doc(db,'users',currentUser.uid),{theme});
@@ -1121,6 +1149,8 @@ onAuthStateChanged(auth, async(user)=>{
     applyTheme(currentUserData?.theme||'system');
     document.getElementById('app').innerHTML=renderApp();
     navigate('home');
+    // Init push notifications
+    initNotifications();
   } else {
     currentUser=null;currentUserData=null;
     document.getElementById('app').innerHTML=renderLogin();
@@ -1128,6 +1158,178 @@ onAuthStateChanged(auth, async(user)=>{
 });
 
 // ─── GLOBAL FUNCTIONS ─────────────────────────────────────
+// ─── PUSH NOTIFICATIONS ───────────────────────────────────
+const VAPID_KEY = 'VAPID_KEY_PLACEHOLDER';
+
+async function requestNotificationPermission(){
+  if(!('Notification' in window)){
+    showToast('❌ Dein Browser unterstützt keine Benachrichtigungen');
+    return false;
+  }
+  if(Notification.permission==='granted') return true;
+  const perm = await Notification.requestPermission();
+  return perm==='granted';
+}
+
+async function initPushNotifications(){
+  try{
+    if(!messaging) return;
+    const granted = await requestNotificationPermission();
+    if(!granted) return;
+    
+    // Register service worker
+    const sw = await navigator.serviceWorker.register('/sw.js');
+    
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: sw
+    });
+    
+    if(token){
+      await updateDoc(doc(db,'users',currentUser.uid),{fcmToken:token});
+      console.log('FCM Token saved');
+    }
+  }catch(e){ console.log('Push init error:', e); }
+}
+
+function setupLocalNotifications(){
+  // Schedule daily reminder at 21:00
+  function scheduleReminder(){
+    const now = new Date();
+    const reminder = new Date();
+    reminder.setHours(21,0,0,0);
+    if(reminder<=now) reminder.setDate(reminder.getDate()+1);
+    const ms = reminder-now;
+    setTimeout(async()=>{
+      const today = getToday();
+      const data = getDayData(currentUser.uid, today);
+      const sc = dayScore(data);
+      if(sc<DAY_GOAL && Notification.permission==='granted'){
+        new Notification('⚡ Flex Challenge', {
+          body: `Du hast heute erst ${sc}/${MAX_PTS} Punkte. Noch Zeit bis Mitternacht! 💪`,
+          icon: '/icon192.png',
+          tag: 'daily-reminder'
+        });
+      }
+      scheduleReminder(); // reschedule for next day
+    }, ms);
+  }
+  scheduleReminder();
+
+  // Morning recap at 08:00
+  function scheduleMorningRecap(){
+    const now = new Date();
+    const morning = new Date();
+    morning.setHours(8,0,0,0);
+    if(morning<=now) morning.setDate(morning.getDate()+1);
+    const ms = morning-now;
+    setTimeout(async()=>{
+      const yesterday = getToday()-1;
+      if(yesterday>=0){
+        const data = getDayData(currentUser.uid, yesterday);
+        const sc = dayScore(data);
+        if(sc===0 && Notification.permission==='granted'){
+          new Notification('📅 Flex Challenge', {
+            body: 'Hast du gestern alles eingetragen? Du kannst noch nachtragen!',
+            icon: '/icon192.png',
+            tag: 'morning-recap'
+          });
+        }
+      }
+      scheduleMorningRecap();
+    }, ms);
+  }
+  scheduleMorningRecap();
+}
+
+function checkStreakDanger(){
+  const today = getToday();
+  const data = getDayData(currentUser.uid, today);
+  const sc = dayScore(data);
+  const now = new Date();
+  const hour = now.getHours();
+  if(sc===0 && hour>=20 && Notification.permission==='granted'){
+    new Notification('🔥 Streak in Gefahr!', {
+      body: 'Du hast heute noch keine Punkte eingetragen. Jetzt noch schnell! 💪',
+      icon: '/icon192.png',
+      tag: 'streak-danger'
+    });
+  }
+}
+
+function checkLeaderboardChanges(){
+  const sorted = Object.entries(allUsers)
+    .map(([uid,u])=>({uid,score:totalScore(uid)}))
+    .sort((a,b)=>b.score-a.score);
+  const myRank = sorted.findIndex(p=>p.uid===currentUser.uid)+1;
+  const savedRank = parseInt(localStorage.getItem('myLastRank')||'99');
+  
+  if(myRank===1 && savedRank!==1 && Notification.permission==='granted'){
+    new Notification('🥇 Du führst!', {
+      body: 'Du bist jetzt auf Platz 1 der Rangliste! Weiter so! 🏆',
+      icon: '/icon192.png',
+      tag: 'rank-change'
+    });
+  } else if(myRank>savedRank && savedRank!==99 && Notification.permission==='granted'){
+    const overtaker = sorted[myRank-2];
+    const name = allUsers[overtaker?.uid]?.displayName||'Jemand';
+    new Notification('📉 Überholt!', {
+      body: `${name} hat dich überholt und ist jetzt vor dir. Zeit aufzuholen! 💪`,
+      icon: '/icon192.png',
+      tag: 'overtaken'
+    });
+  }
+  localStorage.setItem('myLastRank', myRank);
+}
+
+function checkMilestones(){
+  const today = getToday();
+  const milestones = [7,14,21,30,50,75,100];
+  if(milestones.includes(today) && Notification.permission==='granted'){
+    new Notification(`🎉 Tag ${today} geschafft!`, {
+      body: today===7?'Eine Woche dabei! Du bist großartig! 🌟':
+            today===14?'Zwei Wochen Konstistenz! Beeindruckend! 🔥':
+            today===21?'21 Tage — eine Gewohnheit ist geboren! 💪':
+            today===30?'Ein Monat! Du bist unaufhaltsam! 🏆':
+            `Tag ${today} — du machst das fantastisch! ⚡`,
+      icon: '/icon192.png',
+      tag: 'milestone'
+    });
+  }
+}
+
+// Listen for incoming messages when app is open
+function setupMessageListener(){
+  if(!messaging) return;
+  onMessage(messaging, (payload)=>{
+    const {title,body} = payload.notification||{};
+    if(title) showToast(`🔔 ${body||title}`);
+  });
+}
+
+async function initNotifications(){
+  if(Notification.permission==='default'){
+    // Show prompt after short delay
+    setTimeout(async()=>{
+      const granted = await requestNotificationPermission();
+      if(granted){
+        setupLocalNotifications();
+        checkStreakDanger();
+        checkMilestones();
+        checkLeaderboardChanges();
+        setupMessageListener();
+        showToast('🔔 Benachrichtigungen aktiviert!');
+      }
+    }, 3000);
+  } else if(Notification.permission==='granted'){
+    setupLocalNotifications();
+    checkStreakDanger();
+    checkMilestones();
+    checkLeaderboardChanges();
+    setupMessageListener();
+  }
+}
+
 // ─── EMOJI & GIF ──────────────────────────────────────────
 const EMOJIS=['😊','😂','🔥','💪','❤️','👏','🎉','😍','🤔','😅',
               '✨','🌟','💯','🙌','😎','🤩','😴','😤','🥳','😇',
