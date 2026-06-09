@@ -361,7 +361,7 @@ window.dismissInstall = () => {
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
@@ -976,17 +976,19 @@ function setupUnreadListeners(){
   
   chatIds.forEach(cid=>{
     const path = cid==='group'?'groupChat':cid;
-    const q3 = query(collection(db,'chats',path,'messages'),orderBy('ts','desc'));
+    const q3 = query(collection(db,'chats',path,'messages'),orderBy('ts','desc'),limit(1));
     const unsub = onSnapshot(q3, snap=>{
       if(snap.empty) return;
       const latest = snap.docs[0].data();
       if(latest.uid===currentUser.uid) return; // own message
       const ts = latest.ts?.toDate?.()?.getTime()||0;
+      if(ts===0) return; // pending server timestamp, will re-fire
       // currently viewing this chat? mark read instead
       if(currentPage==='chat'&&activeChatId===cid){
         markChatRead(cid);
         return;
       }
+      console.log('Unread check:', cid, 'msgTs:', ts, 'lastRead:', getLastRead(cid));
       if(ts > getLastRead(cid)){
         unreadChats[cid] = true;
         updateUnreadUI();
@@ -1329,7 +1331,8 @@ async function initPushNotifications(){
     // Register service worker
     let sw;
     try {
-      sw = await navigator.serviceWorker.register('/sw.js');
+      sw = await navigator.serviceWorker.register('/sw.js', {updateViaCache:'none'});
+      await sw.update(); // force check for new SW version
       await navigator.serviceWorker.ready;
     } catch(swErr) {
       console.log('SW registration failed:', swErr);
