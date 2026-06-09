@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<!-- v1.0 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>⚡ Flex Challenge</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Flex Challenge">
+<meta name="theme-color" content="#0F1923">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0F1923;
+  --surface:#1A2533;
+  --surface2:#222E3D;
+  --border:#2A3A4D;
+  --teal:#00C9A7;
+  --teal-dim:#00C9A720;
+  --teal-mid:#00C9A740;
+  --blue:#4A9EFF;
+  --text:#F0F4F8;
+  --text-soft:#8A9BB0;
+  --text-muted:#4A5A6D;
+  --red:#FF5A5A;
+  --gold:#FFB830;
+  --green:#2ECC71;
+  --radius:16px;
+  --radius-sm:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;overflow:hidden;}
+#app{height:100%;display:flex;flex-direction:column;}
+
+/* AUTH SCREENS */
+.auth-screen{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;gap:24px;overflow-y:auto;
+}
+.auth-logo{font-size:56px;margin-bottom:8px;}
+.auth-title{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--teal);text-align:center;}
+.auth-sub{font-size:14px;color:var(--text-soft);text-align:center;line-height:1.6;}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px;}
+.auth-card h2{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;}
+.field input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+.field input:focus{border-color:var(--teal);}
+.field input::placeholder{color:var(--text-muted);}
+.btn{padding:13px 20px;border-radius:var(--radius-sm);border:none;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;text-align:center;}
+.btn-primary{background:var(--teal);color:#0F1923;}
+.btn-primary:hover{filter:brightness(1.1);}
+.btn-primary:active{transform:scale(.97);}
+.btn-ghost{background:transparent;color:var(--text-soft);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
+.btn-danger{background:var(--red);color:white;}
+.auth-divider{display:flex;align-items:center;gap:12px;color:var(--text-muted);font-size:13px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-link{color:var(--teal);cursor:pointer;font-size:14px;text-align:center;}
+.auth-error{background:#FF5A5A20;border:1px solid #FF5A5A40;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--red);display:none;}
+.auth-error.show{display:block;}
+
+/* MAIN APP */
+.main-app{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--teal);}
+.topbar-user{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--teal);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--teal);flex-shrink:0;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+
+.page{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px;}
+.page::-webkit-scrollbar{display:none;}
+
+/* BOTTOM NAV */
+.bottom-nav{background:var(--surface);border-top:1px solid var(--border);display:flex;flex-shrink:0;z-index:10;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;cursor:pointer;transition:color .2s;color:var(--text-muted);border:none;background:none;font-family:'Inter',sans-serif;}
+.nav-item.active{color:var(--teal);}
+.nav-item svg{width:22px;height:22px;}
+.nav-item span{font-size:10px;font-weight:500;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.card-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
+
+/* HERO CARD */
+.hero-card{background:linear-gradient(135deg,#0D2B3E,#0F1923);border:1px solid var(--teal-mid);border-radius:var(--radius);padding:20px;margin-bottom:12px;position:relative;overflow:hidden;}
+.hero-card::before{content:'⚡';position:absolute;right:-8px;top:-8px;font-size:90px;opacity:.06;}
+.hero-name{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--teal);}
+.hero-sub{font-size:13px;color:var(--text-soft);margin-top:2px;}
+.hero-badges{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+.badge{background:rgba(0,201,167,.12);border:1px solid var(--teal-mid);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--teal);}
+
+/* PROGRESS */
+.progress-bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;margin:8px 0;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:99px;transition:width .5s ease;}
+
+/* TASK ROW */
+.task-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.task-row:last-child{border-bottom:none;}
+.task-icon-wrap{width:40px;height:40px;border-radius:12px;background:var(--teal-dim);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.task-info{flex:1;}
+.task-name{font-weight:600;font-size:14px;}
+.task-sub{font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;}
+.score-btns{display:flex;gap:6px;}
+.score-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-soft);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.score-btn.active-0{background:#FF5A5A20;border-color:var(--red);color:var(--red);}
+.score-btn.active-1{background:#FFB83020;border-color:var(--gold);color:var(--gold);}
+.score-btn.active-2{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+.score-btn.active-3{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+.score-btn.active-photo{background:#4A9EFF20;border-color:var(--blue);color:var(--blue);}
+
+/* DAY BADGE */
+.day-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;}
+.day-badge.great{background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);}
+.day-badge.ok{background:#FFB83020;color:var(--gold);border:1px solid #FFB83040;}
+.day-badge.miss{background:#FF5A5A20;color:var(--red);border:1px solid #FF5A5A40;}
+.day-badge.cc{background:#9B59B620;color:#9B59B6;border:1px solid #9B59B640;}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.lb-row:last-child{border-bottom:none;}
+.lb-rank{width:28px;text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;color:var(--text-muted);}
+.lb-rank.top1{color:var(--gold);}
+.lb-rank.top2{color:#C0C0C0;}
+.lb-rank.top3{color:#CD7F32;}
+.lb-info{flex:1;}
+.lb-name{font-weight:600;font-size:14px;}
+.lb-pts{font-size:12px;color:var(--text-soft);}
+.lb-score{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;color:var(--teal);}
+.lb-me{background:var(--teal-dim);border-radius:var(--radius-sm);margin:-2px -4px;padding:2px 4px;}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.chat-tabs{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;flex-shrink:0;}
+.chat-tabs::-webkit-scrollbar{display:none;}
+.chat-tab{padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:transparent;color:var(--text-soft);cursor:pointer;white-space:nowrap;transition:all .2s;}
+.chat-tab.active{background:var(--teal);border-color:var(--teal);color:#0F1923;}
+.chat-messages{flex:1;overflow-y:auto;padding:0 16px;display:flex;flex-direction:column;gap:10px;}
+.chat-messages::-webkit-scrollbar{display:none;}
+.msg{display:flex;flex-direction:column;max-width:80%;}
+.msg.mine{align-self:flex-end;align-items:flex-end;}
+.msg.theirs{align-self:flex-start;align-items:flex-start;}
+.msg-author{font-size:11px;color:var(--text-muted);margin-bottom:3px;font-weight:600;}
+.msg-bubble{padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;}
+.msg.mine .msg-bubble{background:var(--teal);color:#0F1923;border-bottom-right-radius:4px;}
+.msg.theirs .msg-bubble{background:var(--surface2);color:var(--text);border-bottom-left-radius:4px;}
+.msg-time{font-size:10px;color:var(--text-muted);margin-top:3px;}
+.chat-input-wrap{padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:10px 16px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;}
+.chat-input:focus{border-color:var(--teal);}
+.chat-send{width:40px;height:40px;border-radius:50%;background:var(--teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* PROFILE PAGE */
+.profile-header{display:flex;flex-direction:column;align-items:center;padding:24px 16px 16px;gap:12px;}
+.profile-avatar{width:80px;height:80px;border-radius:50%;border:3px solid var(--teal);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;cursor:pointer;position:relative;}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;}
+.profile-avatar-edit{position:absolute;bottom:0;right:0;background:var(--teal);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.profile-name{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;}
+.profile-email{font-size:13px;color:var(--text-muted);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.stat-card{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;text-align:center;}
+.stat-val{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--teal);}
+.stat-label{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* TOAST */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--surface2);border:1px solid var(--teal-mid);border-radius:99px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--teal);z-index:999;transition:transform .3s ease;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* QUOTE CARD */
+.quote-card{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;position:relative;}
+.quote-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.quote-text{font-size:15px;font-style:italic;line-height:1.6;color:var(--text-soft);}
+.quote-deco{position:absolute;right:12px;top:12px;font-size:32px;opacity:.15;}
+
+/* CC */
+.cc-toggle{display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);cursor:pointer;border:1.5px solid var(--border);transition:all .2s;}
+.cc-toggle.active{border-color:#9B59B6;background:#9B59B610;}
+.toggle-dot{width:44px;height:26px;border-radius:99px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0;}
+.toggle-dot::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:white;top:3px;left:3px;transition:left .2s;}
+.cc-toggle.active .toggle-dot{background:#9B59B6;}
+.cc-toggle.active .toggle-dot::after{left:21px;}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s ease;}
+.modal-overlay.show .modal{transform:translateY(0);}
+.modal-title{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:16px;}
+.modal-close{float:right;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;margin-top:-4px;}
+
+/* DM CHAT */
+.dm-list{display:flex;flex-direction:column;gap:2px;}
+.dm-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;}
+.dm-item:hover{background:var(--surface2);}
+.dm-name{font-weight:600;font-size:14px;}
+.dm-preview{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.dm-time{font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:0;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading" id="loadingScreen">
+    <div class="loading-spinner"></div>
+    <div style="color:var(--text-soft);font-size:14px;">Wird geladen…</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA5-KCa7NwlMYnWjYjF3phc6BOTH6v1iTU",
+  authDomain: "challenge-v3.firebaseapp.com",
+  projectId: "challenge-v3",
+  storageBucket: "challenge-v3.firebasestorage.app",
+  messagingSenderId: "596884638595",
+  appId: "1:596884638595:web:3ccd38a2fb72f5b41744b6"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
+const storage = getStorage(firebaseApp);
+
+// ─── CONFIG ───────────────────────────────────────────────
+const MAX_PTS = 11;
+const DAY_GOAL = 8;
+const MAX_CC = 8;
+const ADMIN_EMAIL = "alice@challenge.app"; // change to your email
+
+function getUserStart(uid){
+  const u=allUsers[uid];
+  if(!u?.startDate) return new Date();
+  return u.startDate.toDate?u.startDate.toDate():new Date(u.startDate);
+}
+function getUserDayIdx(uid){
+  const start=getUserStart(uid);
+  const diff=Math.floor((new Date()-start)/(1000*60*60*24));
+  return Math.max(0,diff);
+}
+
+const TASKS = [
+  {key:'water',  icon:'💧', name:'Wasser',      sub:'2L = 2 Pkt · 1,5L = 1 Pkt',                                    max:2},
+  {key:'schritte',icon:'👟',name:'Schritte',     sub:'≥10.000 = 2 · ≥8.000 = 1 · <8.000 = 0',                        max:2},
+  {key:'training',icon:'🏋️',name:'Training',     sub:'Gemacht = 2 · Nicht = 0',                                       max:2},
+  {key:'sugar',  icon:'🚫', name:'Kein Zucker',  sub:'Kein Industrie-/Saccharose-Zucker = 3 · Gegessen = 0\n(Fruchtzucker & Süßungsmittel erlaubt)', max:3},
+  {key:'read',   icon:'📚', name:'Lesen',        sub:'30 Min = 2 · 15 Min = 1',                                       max:2},
+  {key:'photo',  icon:'📸', name:'Foto',         sub:'Nur für dich — Progress verfolgen · keine Punkte',              max:0},
+];
+
+const QUOTES = [
+  "Dein Körper ist kein Problem, das gelöst werden muss.",
+  "Sei so freundlich zu dir selbst wie zu deiner besten Freund*in.",
+  "Du machst das nicht für den Sommer. Du machst das für dich.",
+  "You are enough. You have always been enough.",
+  "Konsistenz schlägt Perfektion jeden Tag.",
+  "Kleine Schritte zählen. Auch heute.",
+  "Niemand muss alleine stark sein — ihr habt euch.",
+  "80% gut ist besser als perfekt und aufgeben.",
+  "Stark, fokussiert, mutig — alles gleichzeitig.",
+  "Jeder Tag ist ein neuer Anfang.",
+];
+
+// ─── STATE ────────────────────────────────────────────────
+let currentUser = null;
+let currentUserData = null;
+let currentPage = 'home';
+let challengeData = {};
+let allUsers = {};
+let activeChatId = 'group';
+let chatUnsub = null;
+let dmChatId = null;
+let currentDayIdx = 0;
+
+// ─── HELPERS ──────────────────────────────────────────────
+function getToday(uid){
+  uid=uid||currentUser?.uid;
+  return getUserDayIdx(uid);
+}
+function formatDate(d){return d.toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function dayScore(data){
+  if(!data) return 0;
+  return TASKS.reduce((s,t)=>{const v=data[t.key];return s+(typeof v==='number'?v:0);},0);
+}
+function totalScore(uid){
+  if(!challengeData[uid]) return 0;
+  return Object.values(challengeData[uid]).reduce((s,d)=>s+dayScore(d),0);
+}
+function totalGoal(uid){
+  const days=Math.max(1,getUserDayIdx(uid));
+  return Math.round(days*MAX_PTS*0.6);
+}
+function getInitials(name){return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+function getDayData(uid,idx){
+  return challengeData[uid]?.[idx]||{water:null,schritte:null,training:null,sugar:null,read:null,photo:null,note:'',cc:false};
+}
+
+// ─── RENDER HELPERS ───────────────────────────────────────
+function avatarHTML(uid,size=34){
+  const u=allUsers[uid];
+  const url=u?.photoURL;
+  if(url) return `<div class="avatar" style="width:${size}px;height:${size}px;"><img src="${url}"></div>`;
+  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*0.38}px;">${getInitials(u?.displayName||'?')}</div>`;
+}
+
+// ─── AUTH SCREENS ─────────────────────────────────────────
+function renderLogin(){
+  return `<div class="auth-screen">
+    <div>
+      <div class="auth-logo">⚡</div>
+      <div class="auth-title">Flex Challenge</div>
+      <div class="auth-sub">Dein täglicher Begleiter für Gewohnheiten, Punkte & Motivation</div>
+    </div>
+    <div class="auth-card">
+      <h2>Anmelden</h2>
+      <div class="field"><label>E-Mail</label><input type="email" id="loginEmail" placeholder="deine@email.com" autocomplete="email"></div>
+      <div class="field"><label>Passwort</label><input type="password" id="loginPw" placeholder="••••••••" autocomplete="current-password"></div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="btn btn-primary" onclick="doLogin()">Anmelden →</button>
+    </div>
+    <div class="auth-divider">oder</div>
+    <div class="auth-link" onclick="showRegister()">Einladungscode eingeben & registrieren</div>
+  </div>`;
+}
+
+function renderRegister(){
+  return `<div class="auth-screen">
+    <div>
+      <div class="auth-logo">⚡</div>
+      <div class="auth-title">Registrieren</div>
+      <div class="auth-sub">Du brauchst einen Einladungscode von Alice</div>
+    </div>
+    <div class="auth-card">
+      <h2>Konto erstellen</h2>
+      <div class="field"><label>Einladungscode</label><input type="text" id="inviteCode" placeholder="z.B. FLEX2026" autocomplete="off"></div>
+      <div class="field"><label>Dein Name</label><input type="text" id="regName" placeholder="Vorname" autocomplete="name"></div>
+      <div class="field"><label>E-Mail</label><input type="email" id="regEmail" placeholder="deine@email.com" autocomplete="email"></div>
+      <div class="field"><label>Passwort (mind. 6 Zeichen)</label><input type="password" id="regPw" placeholder="••••••••" autocomplete="new-password"></div>
+      <div class="auth-error" id="regError"></div>
+      <button class="btn btn-primary" onclick="doRegister()">Konto erstellen →</button>
+    </div>
+    <div class="auth-link" onclick="showLogin()">← Zurück zum Login</div>
+  </div>`;
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────
+function renderApp(){
+  return `<div class="main-app" id="mainApp">
+    <div class="topbar">
+      <div class="topbar-title">⚡ Flex Challenge</div>
+      <div class="topbar-user" onclick="navigate('profile')">
+        ${avatarHTML(currentUser.uid,34)}
+        <span style="font-size:13px;font-weight:600;">${currentUserData?.displayName||currentUser.email}</span>
+      </div>
+    </div>
+    <div class="page" id="pageContent"></div>
+    <nav class="bottom-nav">
+      <button class="nav-item ${currentPage==='home'?'active':''}" onclick="navigate('home')">
+        ${svgHome()} <span>Start</span>
+      </button>
+      <button class="nav-item ${currentPage==='days'?'active':''}" onclick="navigate('days')">
+        ${svgCalendar()} <span>Meine Tage</span>
+      </button>
+      <button class="nav-item ${currentPage==='leaderboard'?'active':''}" onclick="navigate('leaderboard')">
+        ${svgChart()} <span>Rangliste</span>
+      </button>
+      <button class="nav-item ${currentPage==='chat'?'active':''}" onclick="navigate('chat')">
+        ${svgChat()} <span>Chat</span>
+      </button>
+      <button class="nav-item ${currentPage==='profile'?'active':''}" onclick="navigate('profile')">
+        ${svgUser()} <span>Profil</span>
+      </button>
+    </nav>
+  </div>
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal" id="modal"></div>
+  </div>`;
+}
+
+// ─── PAGE: HOME ───────────────────────────────────────────
+function renderHome(){
+  const today = getToday();
+  const q = QUOTES[today % QUOTES.length];
+  const myData = getDayData(currentUser.uid, today);
+  const sc = dayScore(myData);
+  const badgeCls = myData.cc?'cc':sc>=DAY_GOAL?'great':sc>0?'ok':'miss';
+  const badgeLabel = myData.cc?'CC Tag':sc>=DAY_GOAL?'Ziel erreicht ✓':sc>0?`${sc} Pkt`:'-';
+  const totalSc = totalScore(currentUser.uid);
+  const goal = totalGoal(currentUser.uid);
+  const pct = goal>0?Math.min(100, Math.round(totalSc/goal*100)):0;
+  const startD = getUserStart(currentUser.uid);
+
+  return `
+  <div class="hero-card">
+    <div class="hero-name">${currentUserData?.displayName||'Hey!'}</div>
+    <div class="hero-sub">⚡ Flex Challenge</div>
+    <div class="hero-badges">
+      <div class="badge">Dabei seit ${formatDate(startD)}</div>
+      <div class="badge">Tag ${today+1}</div>
+      <div class="badge">${totalSc} Pkt gesamt</div>
+    </div>
+  </div>
+
+  <div class="quote-card">
+    <div class="quote-label">✦ Spruch des Tages</div>
+    <div class="quote-text">"${q}"</div>
+    <div class="quote-deco">💬</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-weight:600;font-size:14px;">Mein Gesamtfortschritt</div>
+      <div class="day-badge ${badgeCls}">${badgeLabel}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;">
+      <span>${totalSc} Pkt</span><span>Ziel: ${goal} Pkt (${pct}%)</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="navigate('days')">Heute eintragen →</button>
+  </div>
+
+  <div class="section-label">Regeln</div>
+  <div class="card">
+    <div class="card-title">⚡ Punkte-System</div>
+    ${TASKS.map(t=>`
+    <div class="task-row">
+      <div class="task-icon-wrap">${t.icon}</div>
+      <div class="task-info">
+        <div class="task-name">${t.name}</div>
+        <div class="task-sub">${t.sub}</div>
+      </div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--teal);">${t.max}</div>
+    </div>`).join('')}
+    <div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-soft);line-height:1.6;">
+      <strong style="color:var(--text);">Ziel:</strong> Mind. ${DAY_GOAL} Pkt/Tag · Max ${MAX_PTS} Pkt/Tag<br>
+      <strong style="color:var(--text);">CC-Tage:</strong> Max. ${MAX_CC} bewusste Ausnahmen — kein Neustart!<br>
+      <strong style="color:var(--text);">Konsistenz</strong> über Perfektion 💪
+    </div>
+  </div>`;
+}
+
+// ─── PAGE: DAYS ───────────────────────────────────────────
+function renderDays(){
+  const today = getToday();
+  if(currentDayIdx > today) currentDayIdx = today;
+  // open-ended: today is always the latest day
+  const data = getDayData(currentUser.uid, currentDayIdx);
+  const sc = dayScore(data);
+  const isToday = currentDayIdx === today;
+  const date = new Date(CHALLENGE_START);
+  date.setDate(date.getDate() + currentDayIdx);
+  const dateStr = date.toLocaleDateString('de-AT',{weekday:'short',day:'2-digit',month:'2-digit'});
+
+  let html = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px;" onclick="changeDay(-1)" ${currentDayIdx===0?'disabled':''}>← Zurück</button>
+    <div style="text-align:center;">
+      <div style="font-weight:700;font-size:15px;">${isToday?'🌟 Heute':'Tag '+(currentDayIdx+1)}</div>
+      <div style="font-size:12px;color:var(--text-muted);">${dateStr}</div>
+    </div>
+    <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px;" onclick="changeDay(1)" ${currentDayIdx>=today?'disabled':''}>Weiter →</button>
+  </div>
+
+  <div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:13px;color:var(--text-muted);">Punkte heute</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--teal);">${sc} <span style="font-size:14px;color:var(--text-muted);">/ ${MAX_PTS}</span></div>
+      </div>
+      <div class="progress-bar" style="width:120px;"><div class="progress-fill" style="width:${Math.round(sc/MAX_PTS*100)}%"></div></div>
+    </div>
+  </div>
+
+  <div class="card">`;
+
+  TASKS.forEach((task,idx)=>{
+    const val = data[task.key];
+    if(task.max===3){
+      html+=`<div class="task-row">
+        <div class="task-icon-wrap">${task.icon}</div>
+        <div class="task-info"><div class="task-name">${task.name}</div><div class="task-sub">${task.sub}</div></div>
+        <div class="score-btns">
+          <button class="score-btn ${val===0?'active-0':''}" onclick="setScore('${task.key}',0)">✗</button>
+          <button class="score-btn ${val===3?'active-3':''}" onclick="setScore('${task.key}',3)">3</button>
+        </div></div>`;
+    } else if(task.max===2){
+      html+=`<div class="task-row">
+        <div class="task-icon-wrap">${task.icon}</div>
+        <div class="task-info"><div class="task-name">${task.name}</div><div class="task-sub">${task.sub}</div></div>
+        <div class="score-btns">
+          ${[0,1,2].map(v=>`<button class="score-btn ${val===v?'active-'+v:''}" onclick="setScore('${task.key}',${v})">${v}</button>`).join('')}
+        </div></div>`;
+    } else {
+      html+=`<div class="task-row">
+        <div class="task-icon-wrap">${task.icon}</div>
+        <div class="task-info"><div class="task-name">${task.name}</div><div class="task-sub">${task.sub}</div></div>
+        <div class="score-btns">
+          <button class="score-btn ${!val?'active-0':''}" onclick="setScore('${task.key}',null)">✗</button>
+          <button class="score-btn ${val==='done'?'active-photo':''}" onclick="setScore('${task.key}','done')">📸</button>
+        </div></div>`;
+    }
+  });
+
+  html+=`</div>
+  <div class="card">
+    <div class="card-title">🌴 Conscious Choice</div>
+    <div class="cc-info" style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:12px;">
+      An besonderen Tagen (Geburtstag, Event, Urlaub, Hochzeit…) darf man bewusst eine Ausnahme machen — <strong style="color:var(--text);">ohne Neustart!</strong><br>
+      Einfach <strong style="color:var(--text);">"CC"</strong> markieren und den Tag genießen.<br>
+      Erlaubt: <strong style="color:var(--text);">max. ${MAX_CC} CC-Tage</strong> in den ganzen 75 Tagen.
+    </div>
+    <div class="cc-toggle ${data.cc?'active':''}" onclick="toggleCC()">
+      <div class="toggle-dot"></div>
+      <div>
+        <div style="font-weight:600;font-size:14px;">CC Tag aktivieren</div>
+        <div style="font-size:12px;color:var(--text-muted);">Bewusste Ausnahme — kein Neustart</div>
+      </div>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+// ─── PAGE: LEADERBOARD ────────────────────────────────────
+function renderLeaderboard(){
+  const sorted = Object.entries(allUsers)
+    .map(([uid,u])=>{
+      const days=Math.max(1,getUserDayIdx(uid));
+      return {uid,name:u.displayName||u.email,score:totalScore(uid),goal:totalGoal(uid),days};
+    })
+    .sort((a,b)=>b.score-a.score);
+
+  const medals=['🥇','🥈','🥉'];
+  const today = getToday();
+
+  let html = `<div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);">
+      <span>Dein Tag: ${today+1}</span>
+      <span>${sorted.length} Teilnehmer*innen</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏆 Rangliste</div>`;
+
+  sorted.forEach((p,i)=>{
+    const isMe = p.uid===currentUser.uid;
+    const pct = Math.min(100,Math.round(p.score/p.goal*100));
+    html+=`<div class="lb-row ${isMe?'lb-me':''}">
+      <div class="lb-rank ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${medals[i]||i+1}</div>
+      ${avatarHTML(p.uid,32)}
+      <div class="lb-info">
+        <div class="lb-name">${p.name}${isMe?' (ich)':''}</div>
+        <div class="lb-pts">${p.score} Pkt · Tag ${p.days} · ${pct}%</div>
+      </div>
+      <div class="lb-score">${p.score}</div>
+    </div>`;
+  });
+
+  html+=`</div>`;
+  return html;
+}
+
+// ─── PAGE: CHAT ───────────────────────────────────────────
+function renderChat(){
+  const otherUsers = Object.entries(allUsers).filter(([uid])=>uid!==currentUser.uid);
+
+  let tabsHtml = `<div class="chat-tabs">
+    <button class="chat-tab ${activeChatId==='group'?'active':''}" onclick="switchChat('group')">👥 Gruppe</button>`;
+  otherUsers.forEach(([uid,u])=>{
+    const chatId = [currentUser.uid,uid].sort().join('_');
+    tabsHtml+=`<button class="chat-tab ${activeChatId===chatId?'active':''}" onclick="switchChat('${chatId}','${uid}')">${u.displayName||u.email.split('@')[0]}</button>`;
+  });
+  tabsHtml+=`</div>`;
+
+  return `<div class="chat-wrap">
+    ${tabsHtml}
+    <div class="chat-messages" id="chatMessages"><div style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">Lade Nachrichten…</div></div>
+    <div class="chat-input-wrap">
+      <input class="chat-input" id="chatInput" placeholder="Nachricht…" onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="chat-send" onclick="sendMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F1923" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
+// ─── PAGE: PROFILE ─────────────────────────────────────────
+function renderProfile(){
+  const uid = currentUser.uid;
+  const totalSc = totalScore(uid);
+  const goal = totalGoal(uid);
+  const pct = Math.min(100,Math.round(totalSc/goal*100));
+  const today = getToday();
+  let streak=0;
+  for(let i=today;i>=0;i--){
+    const d=getDayData(uid,i);
+    if(dayScore(d)>=DAY_GOAL||d.cc) streak++;
+    else break;
+  }
+  const url = currentUserData?.photoURL||allUsers[uid]?.photoURL;
+
+  return `<div class="profile-header">
+    <div class="profile-avatar" onclick="triggerPhotoUpload()">
+      ${url?`<img src="${url}">`:`<span>${getInitials(currentUserData?.displayName||'?')}</span>`}
+      <div class="profile-avatar-edit">✏️</div>
+    </div>
+    <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="uploadPhoto(this)">
+    <div class="profile-name">${currentUserData?.displayName||currentUser.email}</div>
+    <div class="profile-email">${currentUser.email}</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-val">${totalSc}</div><div class="stat-label">Punkte gesamt</div></div>
+    <div class="stat-card"><div class="stat-val">${pct}%</div><div class="stat-label">Ziel erreicht</div></div>
+    <div class="stat-card"><div class="stat-val">${streak}</div><div class="stat-label">Streak 🔥</div></div>
+    <div class="stat-card"><div class="stat-val">${today+1}</div><div class="stat-label">Aktueller Tag</div></div>
+  </div>
+
+  <div class="card">
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${totalSc} / ${goal} Punkte zum Ziel</div>
+  </div>
+
+  <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="showChangePassword()">🔑 Passwort ändern</button>
+  <button class="btn btn-danger" style="width:100%;" onclick="doSignOut()">Abmelden</button>`;
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────
+function navigate(page){
+  currentPage = page;
+  if(chatUnsub){chatUnsub();chatUnsub=null;}
+  const app = document.getElementById('mainApp');
+  if(!app) return;
+  app.querySelector('.bottom-nav').querySelectorAll('.nav-item').forEach((el,i)=>{
+    el.classList.toggle('active',['home','days','leaderboard','chat','profile'][i]===page);
+  });
+  const content = document.getElementById('pageContent');
+  if(page==='home') content.innerHTML=renderHome();
+  else if(page==='days'){content.innerHTML=renderDays();}
+  else if(page==='leaderboard') content.innerHTML=renderLeaderboard();
+  else if(page==='chat'){content.innerHTML=renderChat();setTimeout(()=>loadChat(),100);}
+  else if(page==='profile') content.innerHTML=renderProfile();
+}
+
+// ─── CHAT LOGIC ───────────────────────────────────────────
+async function loadChat(){
+  if(chatUnsub) chatUnsub();
+  const chatPath = activeChatId==='group'?'groupChat':activeChatId;
+  const q2 = query(collection(db,'chats',chatPath,'messages'),orderBy('ts'));
+  chatUnsub = onSnapshot(q2,snap=>{
+    const msgs = document.getElementById('chatMessages');
+    if(!msgs) return;
+    if(snap.empty){msgs.innerHTML=`<div style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">Noch keine Nachrichten ✨</div>`;return;}
+    msgs.innerHTML = snap.docs.map(d=>{
+      const m=d.data();
+      const mine=m.uid===currentUser.uid;
+      const ts=m.ts?.toDate?.()?m.ts.toDate().toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}):'';
+      return `<div class="msg ${mine?'mine':'theirs'}">
+        ${!mine?`<div class="msg-author">${allUsers[m.uid]?.displayName||m.uid}</div>`:''}
+        <div class="msg-bubble">${m.text}</div>
+        <div class="msg-time">${ts}</div>
+      </div>`;
+    }).join('');
+    msgs.scrollTop=msgs.scrollHeight;
+  });
+}
+
+function switchChat(id, uid){
+  activeChatId=id;
+  if(chatUnsub){chatUnsub();chatUnsub=null;}
+  navigate('chat');
+}
+
+async function sendMsg(){
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim();
+  if(!text) return;
+  inp.value='';
+  const chatPath=activeChatId==='group'?'groupChat':activeChatId;
+  await addDoc(collection(db,'chats',chatPath,'messages'),{
+    uid:currentUser.uid,
+    text,
+    ts:serverTimestamp()
+  });
+}
+
+// ─── SCORE LOGIC ──────────────────────────────────────────
+async function setScore(key, val){
+  const today = getToday();
+  const ref2 = doc(db,'challenge',currentUser.uid,'days',String(today));
+  const current = getDayData(currentUser.uid, today);
+  current[key] = val;
+  if(!challengeData[currentUser.uid]) challengeData[currentUser.uid]={};
+  challengeData[currentUser.uid][today]=current;
+  await setDoc(ref2, current, {merge:true});
+  navigate('days');
+  const sc=dayScore(current);
+  if(sc>=MAX_PTS) showToast('🌟 Perfekter Tag!');
+  else if(sc>=DAY_GOAL) showToast('✓ Tagesziel erreicht!');
+}
+
+async function toggleCC(){
+  const today=getToday();
+  const ref2=doc(db,'challenge',currentUser.uid,'days',String(today));
+  const current=getDayData(currentUser.uid,today);
+  current.cc=!current.cc;
+  if(!challengeData[currentUser.uid]) challengeData[currentUser.uid]={};
+  challengeData[currentUser.uid][today]=current;
+  await setDoc(ref2,current,{merge:true});
+  navigate('days');
+}
+
+function changeDay(dir){
+  currentDayIdx=Math.max(0,Math.min(getToday(),currentDayIdx+dir));
+  navigate('days');
+}
+
+// ─── PHOTO UPLOAD ─────────────────────────────────────────
+function triggerPhotoUpload(){document.getElementById('photoInput').click();}
+async function uploadPhoto(input){
+  const file=input.files[0];if(!file) return;
+  showToast('⏳ Foto wird hochgeladen…');
+  try{
+    const r=ref(storage,`photos/${currentUser.uid}`);
+    await uploadBytes(r,file);
+    const url=await getDownloadURL(r);
+    await updateProfile(currentUser,{photoURL:url});
+    await updateDoc(doc(db,'users',currentUser.uid),{photoURL:url});
+    if(!allUsers[currentUser.uid]) allUsers[currentUser.uid]={};
+    allUsers[currentUser.uid].photoURL=url;
+    showToast('✅ Profilbild aktualisiert!');
+    navigate('profile');
+  }catch(e){showToast('❌ Fehler beim Hochladen');}
+}
+
+// ─── AUTH LOGIC ───────────────────────────────────────────
+const INVITE_CODE = "FLEX2026"; // Admin can change this
+
+window.doLogin = async()=>{
+  const email=document.getElementById('loginEmail').value.trim();
+  const pw=document.getElementById('loginPw').value;
+  const err=document.getElementById('loginError');
+  err.classList.remove('show');
+  try{
+    await signInWithEmailAndPassword(auth,email,pw);
+  }catch(e){
+    err.textContent=e.code==='auth/invalid-credential'?'E-Mail oder Passwort falsch.':'Fehler: '+e.message;
+    err.classList.add('show');
+  }
+};
+
+window.doRegister = async()=>{
+  const code=document.getElementById('inviteCode').value.trim().toUpperCase();
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pw=document.getElementById('regPw').value;
+  const err=document.getElementById('regError');
+  err.classList.remove('show');
+  if(code!==INVITE_CODE){err.textContent='Ungültiger Einladungscode.';err.classList.add('show');return;}
+  if(!name){err.textContent='Bitte gib deinen Namen ein.';err.classList.add('show');return;}
+  if(pw.length<6){err.textContent='Passwort muss mind. 6 Zeichen haben.';err.classList.add('show');return;}
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,pw);
+    await updateProfile(cred.user,{displayName:name});
+    await setDoc(doc(db,'users',cred.user.uid),{
+      displayName:name,email,createdAt:serverTimestamp(),startDate:serverTimestamp(),photoURL:null
+    });
+    showToast('🎉 Willkommen '+name+'!');
+  }catch(e){
+    err.textContent=e.code==='auth/email-already-in-use'?'Diese E-Mail ist bereits registriert.':'Fehler: '+e.message;
+    err.classList.add('show');
+  }
+};
+
+window.showRegister = ()=>{document.getElementById('app').innerHTML=renderRegister();};
+window.showLogin = ()=>{document.getElementById('app').innerHTML=renderLogin();};
+
+window.doSignOut = async()=>{
+  if(chatUnsub) chatUnsub();
+  await signOut(auth);
+};
+
+window.showChangePassword = ()=>{
+  document.getElementById('modal').innerHTML=`
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">🔑 Passwort ändern</div>
+    <div class="field" style="margin-bottom:12px;"><label>Neues Passwort</label><input type="password" id="newPw" placeholder="••••••••"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="changePassword()">Speichern</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+};
+
+window.changePassword = async()=>{
+  const {updatePassword}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+  const pw=document.getElementById('newPw').value;
+  if(pw.length<6){showToast('❌ Mind. 6 Zeichen');return;}
+  try{await updatePassword(currentUser,pw);showToast('✅ Passwort geändert!');closeModal();}
+  catch(e){showToast('❌ '+e.message);}
+};
+
+window.closeModal = (e)=>{
+  if(!e||e.target===document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('show');
+};
+
+// ─── DATA LOADING ─────────────────────────────────────────
+async function loadAllData(uid){
+  // Load all users
+  const usersSnap = await getDocs(collection(db,'users'));
+  allUsers={};
+  usersSnap.forEach(d=>{allUsers[d.id]=d.data();});
+
+  // Load my challenge data
+  const myDays = await getDocs(collection(db,'challenge',uid,'days'));
+  challengeData={};
+  challengeData[uid]={};
+  myDays.forEach(d=>{challengeData[uid][d.id]=d.data();});
+
+  // Load others' challenge data
+  for(const ouid of Object.keys(allUsers)){
+    if(ouid===uid) continue;
+    const snap=await getDocs(collection(db,'challenge',ouid,'days'));
+    challengeData[ouid]={};
+    snap.forEach(d=>{challengeData[ouid][d.id]=d.data();});
+  }
+
+  // Listen for realtime updates on my data
+  onSnapshot(collection(db,'challenge',uid,'days'),snap=>{
+    challengeData[uid]={};
+    snap.forEach(d=>{challengeData[uid][d.id]=d.data();});
+    if(currentPage==='home') navigate('home');
+    if(currentPage==='days') navigate('days');
+    if(currentPage==='leaderboard') navigate('leaderboard');
+  });
+}
+
+// ─── AUTH STATE ───────────────────────────────────────────
+onAuthStateChanged(auth, async(user)=>{
+  if(user){
+    currentUser=user;
+    // Load user profile
+    const userDoc=await getDoc(doc(db,'users',user.uid));
+    if(userDoc.exists()) currentUserData=userDoc.data();
+    else currentUserData={displayName:user.displayName||user.email};
+
+    currentDayIdx=getToday();
+    await loadAllData(user.uid);
+    document.getElementById('app').innerHTML=renderApp();
+    navigate('home');
+  } else {
+    currentUser=null;currentUserData=null;
+    document.getElementById('app').innerHTML=renderLogin();
+  }
+});
+
+// ─── GLOBAL FUNCTIONS ─────────────────────────────────────
+window.navigate=navigate;
+window.setScore=setScore;
+window.toggleCC=toggleCC;
+window.changeDay=changeDay;
+window.switchChat=switchChat;
+window.sendMsg=sendMsg;
+window.triggerPhotoUpload=triggerPhotoUpload;
+window.uploadPhoto=uploadPhoto;
+
+// ─── SVG ICONS ────────────────────────────────────────────
+function svgHome(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;}
+function svgCalendar(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;}
+function svgChart(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`;}
+function svgChat(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`;}
+function svgUser(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;}
+</script>
+</body>
+</html>
