@@ -1215,11 +1215,13 @@ async function sendMsg(){
 // ─── SCORE LOGIC ──────────────────────────────────────────
 async function setScore(key, val){
   const today = getToday();
-  const ref2 = doc(db,'challenge',currentUser.uid,'days',String(today));
-  const current = getDayData(currentUser.uid, today);
+  const ref2 = doc(db,'challenge',currentUser.uid,'days',String(currentDayIdx));
+  const current = getDayData(currentUser.uid, currentDayIdx);
+  // Toggle: same value clicked again = deselect (back to null)
+  if(current[key]===val) val = null;
   current[key] = val;
   if(!challengeData[currentUser.uid]) challengeData[currentUser.uid]={};
-  challengeData[currentUser.uid][today]=current;
+  challengeData[currentUser.uid][currentDayIdx]=current;
   await setDoc(ref2, current, {merge:true});
   navigate('days');
   const sc=dayScore(current);
