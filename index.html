@@ -452,6 +452,7 @@ let activeChatId = 'group';
 let chatUnsub = null;
 let unreadChats = {}; // chatId -> true
 let unreadListeners = [];
+let viewingFriendUid = null; // für friendProfile page
 let dmChatId = null;
 let currentDayIdx = null;
 
@@ -776,7 +777,7 @@ function renderLeaderboard(){
   sorted.forEach((p,i)=>{
     const isMe = p.uid===currentUser.uid;
     const pct = Math.min(100,Math.round(p.score/p.goal*100));
-    html+=`<div class="lb-row ${isMe?'lb-me':''}">
+    html+=`<button class="lb-row ${isMe?'lb-me':''}" style="width:100%;text-align:left;padding:12px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);" onclick="viewFriend('${p.uid}')">
       <div class="lb-rank ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${medals[i]||i+1}</div>
       ${avatarHTML(p.uid,32)}
       <div class="lb-info">
@@ -784,7 +785,7 @@ function renderLeaderboard(){
         <div class="lb-pts">${p.score} Pkt · Tag ${p.days} · ${pct}%</div>
       </div>
       <div class="lb-score">${p.score}</div>
-    </div>`;
+    </button>`;
   });
 
   html+=`</div>`;
@@ -1023,6 +1024,73 @@ Format:
   }
 }
 
+// ─── FRIEND PROFILE ────────────────────────────────────────
+window.viewFriend = (uid)=>{
+  viewingFriendUid = uid;
+  navigate('friendProfile');
+};
+
+function renderFriendProfile(){
+  if(!viewingFriendUid) return `<div>Fehler</div>`;
+  
+  const friend = allUsers[viewingFriendUid];
+  if(!friend) return `<div class="card">Profil nicht gefunden</div>`;
+  
+  const friendData = challengeData[viewingFriendUid];
+  const dayData = friendData?.[currentDayIdx]||{};
+  let score = 0;
+  TASKS.forEach(t=>{
+    const val = dayData[t.key]||0;
+    if(t.type==='binary') score += val>0?t.max:0;
+    else if(t.type==='triple') score += val||0;
+    else if(t.type==='photo') score += val?2:0;
+  });
+  
+  let habitsHtml = '';
+  TASKS.forEach(t=>{
+    const val = dayData[t.key]||0;
+    const maxPts = t.type==='binary'?t.max:(t.type==='photo'?2:(t.type==='triple'?2:0));
+    const pct = maxPts>0 ? Math.min(100,Math.round(val/maxPts*100)) : 0;
+    const bgColor = pct===100?'var(--success)':pct>0?'var(--warn)':'transparent';
+    
+    habitsHtml += `<div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;">
+        <span style="font-size:24px;">${t.icon}</span>
+        <div>
+          <div style="font-weight:600;">${t.name}</div>
+          <div style="font-size:11px;color:var(--text-soft);">${t.desc}</div>
+        </div>
+      </div>
+      <div style="background:${bgColor};color:var(--text);border-radius:6px;padding:6px 12px;font-weight:700;min-width:45px;text-align:center;">${val}</div>
+    </div>`;
+  });
+  
+  return `
+  <button class="btn btn-ghost" style="margin-bottom:16px;padding:8px;" onclick="navigate('leaderboard')">← Zurück</button>
+  
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+    <img src="${friend.photoURL||'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSIxNiIgZmlsbD0iI0ZGNkIzNSIvPjwvc3ZnPg=='}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;"/>
+    <div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;">${friend.displayName||friend.email.split('@')[0]}</div>
+      <div style="font-size:13px;color:var(--text-soft);">Tag ${(currentDayIdx)+1} • ${score}/${MAX_PTS} Punkte</div>
+    </div>
+  </div>
+  
+  <button class="btn btn-primary" style="width:100%;margin-bottom:24px;padding:12px;" onclick="startPrivateChat('${viewingFriendUid}')">💬 Nachricht senden</button>
+  
+  <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;">Heute's Gewohnheiten</div>
+  ${habitsHtml}
+  `;
+}
+
+window.startPrivateChat = (friendUid)=>{
+  const friendData = allUsers[friendUid];
+  const chatId = [currentUser.uid, friendUid].sort().join('_');
+  activeChatId = chatId;
+  navigate('chat');
+  markChatRead(chatId);
+};
+
 // ─── PAGE: PROFILE ─────────────────────────────────────────
 function renderProfile(){
   const uid = currentUser.uid;
@@ -1101,6 +1169,7 @@ function navigate(page){
     else if(page==='leaderboard') content.innerHTML=renderLeaderboard();
     else if(page==='chat'){content.innerHTML=renderChat();setTimeout(()=>loadChat(),100);markChatRead(activeChatId);}
     else if(page==='plan') content.innerHTML=renderPlan();
+    else if(page==='friendProfile') content.innerHTML=renderFriendProfile();
     else if(page==='profile') content.innerHTML=renderProfile();
   } catch(err){
     console.error('navigate error:', err);
