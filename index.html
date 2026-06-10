@@ -857,7 +857,7 @@ const QUIZ_STEPS = [
   {key:'job', title:'Wie ist dein Berufsalltag?', type:'choice', options:['🪑 Sitzend','🧍 Stehend','🏃 Körperlich aktiv']},
   {key:'experience', title:'Trainingserfahrung?', type:'choice', options:['🌱 Anfänger','💪 Fortgeschritten','🏆 Profi']},
   {key:'goal', title:'Was ist dein Ziel?', type:'multi', options:['🧘 Wohlbefinden','❤️ Gesundheit','💪 Muskelaufbau','📉 Abnehmen','✨ Alles zusammen']},
-  {key:'location', title:'Wo trainierst du am liebsten?', type:'multi', options:['🏠 Zuhause','🏋️ Gym','🌳 Outdoor']},
+  {key:'location', title:'Wo trainierst du am liebsten?', type:'multi', options:['🏠 Zuhause','🏋️ Gym','🌳 Outdoor','🌍 Überall gemischt']},
   {key:'frequency', title:'Wie oft pro Woche?', type:'choice', options:['1-2x','3-4x','5-6x','Täglich']},
   {key:'focus', title:'Was möchtest du trainieren?', type:'multi', options:['Ganzkörper','Arme','Beine','Po','Bauch','Rücken','Schultern','Brust']},
 ];
@@ -895,9 +895,33 @@ function renderQuizStep(){
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(quizStep/QUIZ_STEPS.length*100)}%"></div></div>
   </div>
+  ${quizStep>0?`<button class="btn btn-ghost" style="padding:8px 16px;font-size:13px;margin-bottom:16px;" onclick="quizBack()">← Zurück</button>`:''}
   <div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;margin-bottom:20px;text-align:center;">${step.title}</div>
   ${inputHtml}`;
+  
+  // Pre-fill previous answer if exists
+  const prevAnswer = quizAnswers[step.key];
+  if(prevAnswer && step.type==='number'){
+    const inp = document.getElementById('quizInput');
+    if(inp) inp.value = prevAnswer;
+  }
+  if(prevAnswer && step.type==='multi'){
+    const prevVals = prevAnswer.split(', ');
+    document.querySelectorAll('.quiz-multi').forEach(btn=>{
+      if(prevVals.includes(btn.dataset.val)){
+        btn.classList.add('btn-primary');
+        btn.classList.remove('btn-ghost');
+      }
+    });
+  }
 }
+
+window.quizBack = ()=>{
+  if(quizStep>0){
+    quizStep--;
+    renderQuizStep();
+  }
+};
 
 window.quizNext = ()=>{
   const inp = document.getElementById('quizInput');
