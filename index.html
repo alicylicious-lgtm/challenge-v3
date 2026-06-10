@@ -398,7 +398,11 @@ function getUserStart(uid){
 }
 function getUserDayIdx(uid){
   const start=getUserStart(uid);
-  const diff=Math.floor((new Date()-start)/(1000*60*60*24));
+  // Compare calendar days, not 24h periods
+  const startDay=new Date(start.getFullYear(),start.getMonth(),start.getDate());
+  const now=new Date();
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const diff=Math.round((today-startDay)/(1000*60*60*24));
   return Math.max(0,diff);
 }
 
